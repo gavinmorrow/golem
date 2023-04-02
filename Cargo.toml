@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 axum = "0.5"
-snowgen = "0.1"
+snowcloud = "0.1"
 tokio = { version = "1", features = ["full"] }

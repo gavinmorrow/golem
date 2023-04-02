@@ -137,7 +137,7 @@ name = "golem"
 version = "0.1.0"
 dependencies = [
  "axum",
- "snowgen",
+ "snowcloud",
  "tokio",
 ]
 
@@ -435,10 +435,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
-name = "snowgen"
-version = "0.1.0"
+name = "snowcloud"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e443ca65ae74b7f8eeae2214a6185028e63afe3507d1c6dd8b2b891752af59d4"
+checksum = "bf0a03859035f342791e2480d085a37bf0dfc57c6f20a1442e1179a2b4c3cb11"
 
 [[package]]
 name = "socket2"
