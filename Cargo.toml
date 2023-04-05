@@ -6,7 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-snowcloud = { version = "0.2", features = ["serde"] }
-axum = "0.6"
+snowcloud = { version = "0.2.0", features = ["serde"] }
+axum = "0.6.12"
 tokio = { version = "1", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0.159", features = ["derive"] }
+log = "0.4.17"
+simple_logger = "4.1.0"

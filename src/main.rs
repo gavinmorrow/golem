@@ -1,15 +1,34 @@
-use axum::{routing::{get, post, delete}, Router};
+use axum::{
+    routing::{delete, get, post},
+    Router,
+};
+use model::AppState;
+use std::sync::Arc;
+use log::info;
 
-mod routes;
 mod model;
+mod routes;
+mod logger;
+
+type Snowcloud = snowcloud::MultiThread<43, 8, 12>;
+const EPOCH: u64 = 1650667342;
+const PRIMARY_ID: i64 = 1;
 
 const ROOT_PATH: &str = "127.0.0.1:7878";
 
 #[tokio::main]
 async fn main() {
-    println!("Starting golem server at {}", ROOT_PATH);
+    logger::init();
 
-    let app = Router::new();
+    info!("Starting golem server at {}", ROOT_PATH);
+
+    let state = Arc::new(AppState::new());
+
+    let app = Router::new()
+        .route("/api/register", post(routes::register))
+        .route("/hello-world", get(routes::hello_world))
+        .route("/snowflake", get(routes::snowflake))
+        .with_state(state);
 
     axum::Server::bind(&ROOT_PATH.parse().unwrap())
         .serve(app.into_make_service())
