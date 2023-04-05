@@ -32,7 +32,7 @@ pub async fn register(
     let snowflake = state.snowcloud.next_id();
     if let Err(err) = snowflake {
         return match err {
-            snowcloud::Error::SequenceMaxReached(next_mllisecond) => {
+            snowcloud::Error::SequenceMaxReached(next_millisecond) => {
                 warn!("Sequence max reached: {}", err);
                 todo!("Wait for next millisecond: {}", next_millisecond.as_millis());
                 Err(StatusCode::TOO_MANY_REQUESTS)
