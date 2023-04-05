@@ -2,13 +2,13 @@ use axum::{
     routing::{delete, get, post},
     Router,
 };
+use log::info;
 use model::AppState;
 use std::sync::Arc;
-use log::info;
 
+mod logger;
 mod model;
 mod routes;
-mod logger;
 
 type Snowcloud = snowcloud::MultiThread<43, 8, 12>;
 const EPOCH: u64 = 1650667342;
