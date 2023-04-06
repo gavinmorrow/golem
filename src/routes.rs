@@ -6,10 +6,6 @@ use axum::{
 use log::{error, warn};
 use std::sync::Arc;
 
-pub async fn hello_world() -> &'static str {
-    "Hello, World!"
-}
-
 pub async fn snowflake(State(state): State<Arc<AppState>>) -> String {
     let snowflake = state.snowcloud.next_id();
     match snowflake {
@@ -32,15 +28,15 @@ pub async fn register(
     let snowflake = state.snowcloud.next_id();
     if let Err(err) = snowflake {
         return match err {
-            snowcloud::Error::SequenceMaxReached(nextMillisecond) => {
-                warn!("Sequence max reached: {}", err);
+            snowcloud::Error::SequenceMaxReached(_next_millisecond) => {
+                warn!("Snowflake sequence max reached: {}", err);
                 Err(StatusCode::TOO_MANY_REQUESTS)
-            },
+            }
             _ => {
                 error!("Failed to generate snowflake: {}", err);
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
-        }
+        };
     }
 
     let snowflake = snowflake.unwrap();
