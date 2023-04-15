@@ -26,7 +26,6 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/register", post(routes::register))
-        .route("/hello-world", get(routes::hello_world))
         .route("/snowflake", get(routes::snowflake))
         .with_state(state);
 
