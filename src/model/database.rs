@@ -1,22 +1,18 @@
 use super::{Message, Session, User};
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection, OptionalExtension, Result};
 
 pub struct Database {
-    users: Vec<User>,
-    messages: Vec<Message>,
-	sessions: Vec<Session>,
+    conn: Connection,
 }
 
 impl Database {
     pub fn build() -> Result<Database> {
-        let db = Database {
-            sessions: Vec::new(),
-        };
-        db.init_db()?;
+        let conn = Database::init_db()?;
+        let db = Database { conn };
         Ok(db)
     }
 
-    fn init_db(&self) -> Result<()> {
+    fn init_db() -> Result<Connection> {
         let conn = Connection::open_in_memory()?;
 
         conn.execute(
@@ -24,7 +20,7 @@ impl Database {
                 id   INTEGER PRIMARY KEY,
                 name TEXT NOT NULL
             )",
-            (), // empty list of parameters.
+            (),
         )?;
 
         conn.execute(
@@ -36,44 +32,79 @@ impl Database {
                 FOREIGN KEY(author) REFERENCES users(id),
                 FOREIGN KEY(parent) REFERENCES messages(id)
             )",
-            (), // empty list of parameters.
+            (),
         )?;
 
+        conn.execute(
+            "CREATE TABLE sessions (
+                id      INTEGER PRIMARY KEY,
+                user    INTEGER NOT NULL,
+                FOREIGN KEY(user) REFERENCES users(id)
+            )",
+            (),
+        )?;
+
+        Ok(conn)
+    }
+
+    pub fn add_user(&self, user: User) -> Result<()> {
+        self.conn.execute(
+            "INSERT INTO users (id, name) VALUES (?1, ?2)",
+            (user.id.id(), user.name),
+        )?;
         Ok(())
     }
 
-    pub fn add_user(&mut self, user: User) -> Result<()> {
-        self.users.push(user);
+    pub fn get_user(&self, id: super::user::Id) -> Result<Option<User>> {
+        self.conn
+            .query_row("SELECT * FROM users WHERE id=?1", (id.id(),), |row| {
+                let id_row = row
+                    .get::<usize, i64>(0)
+                    .expect("id exists in query at column 0");
+                Ok(User {
+                    id: super::user::Id::try_from(id_row).expect("id from db is valid"),
+                    name: row.get(1).expect("name exists in query at column 1"),
+                })
+            })
+            .optional()
+    }
+
+    pub fn get_user_by_name(&self, name: &str) -> Result<Option<User>> {
+        self.conn
+            .query_row("SELECT * FROM users WHERE name=?1", (name,), |row| {
+                let id_row = row
+                    .get::<usize, i64>(0)
+                    .expect("id exists in query at column 0");
+                Ok(User {
+                    id: super::user::Id::try_from(id_row).expect("id from db is valid"),
+                    name: row.get(1).expect("name exists in query at column 1"),
+                })
+            })
+            .optional()
+    }
+
+    pub fn add_session(&self, session: Session) -> Result<()> {
+        self.conn.execute(
+            "INSERT INTO sessions (id, user) VALUES (?1, ?2)",
+            (session.id.id(), session.user_id.id()),
+        )?;
         Ok(())
     }
 
-    pub fn get_user(&self, id: super::user::Id) -> Result<Option<&User>> {
-        Ok(self.users.iter().find(|user| user.id == id))
-    }
-
-    pub fn get_user_by_name(&self, name: &str) -> Result<Option<&User>> {
-        Ok(self.users.iter().find(|user| user.name == name))
-    }
-
-    pub fn add_message(&mut self, message: Message) -> Result<()> {
-        self.messages.push(message);
-        Ok(())
-    }
-
-    pub fn get_message(&self, id: super::message::Id) -> Option<&Message> {
-        self.messages.iter().find(|message| message.id == id)
-    }
-
-    pub fn get_messages(&self) -> &Vec<Message> {
-        &self.messages
-    }
-
-    pub fn add_session(&mut self, session: Session) -> Result<()> {
-        self.sessions.push(session);
-        Ok(())
-    }
-
-    pub fn get_session(&self, id: super::session::Id) -> Option<&Session> {
-        self.sessions.iter().find(|session| session.id == id)
+    pub fn get_session(&self, id: super::session::Id) -> Result<Option<Session>> {
+        self.conn
+            .query_row("SELECT * FROM users WHERE id=?1", (id.id(),), |row| {
+                let session_id_row = row
+                    .get::<usize, i64>(0)
+                    .expect("id exists in query at column 0");
+                let user_id_row = row
+                    .get::<usize, i64>(1)
+                    .expect("user_id exists in query at column 1");
+                Ok(Session {
+                    id: super::session::Id::try_from(session_id_row).expect("id from db is valid"),
+                    user_id: super::user::Id::try_from(user_id_row).expect("id from db is valid"),
+                })
+            })
+            .optional()
     }
 }
