@@ -1,8 +1,9 @@
-use super::{Message, User};
+use super::{Message, User, Session};
 
 pub struct Database {
     users: Vec<User>,
     messages: Vec<Message>,
+	sessions: Vec<Session>,
 }
 
 impl Database {
@@ -10,6 +11,7 @@ impl Database {
         Database {
             users: Vec::new(),
             messages: Vec::new(),
+			sessions: Vec::new(),
         }
     }
 
@@ -38,6 +40,15 @@ impl Database {
     pub fn get_messages(&self) -> &Vec<Message> {
         &self.messages
     }
+
+	pub fn add_session(&mut self, session: Session) -> Result<(), Error> {
+		self.sessions.push(session);
+		Ok(())
+	}
+
+	pub fn get_session(&self, id: super::session::Id) -> Option<&Session> {
+		self.sessions.iter().find(|session| session.id == id)
+	}
 }
 
 #[derive(Debug)]
