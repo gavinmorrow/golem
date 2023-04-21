@@ -51,7 +51,7 @@ pub async fn register(
     let database = state.database.lock().await;
 
     if let Err(err) = database.add_user(user) {
-        eprintln!("Failed to add user to database: {:?}", err);
+        error!("Failed to add user to database: {:?}", err);
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
