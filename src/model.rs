@@ -19,10 +19,13 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> AppState {
+        let snowcloud = crate::Snowcloud::new(crate::PRIMARY_ID, crate::EPOCH)
+            .expect("Failed to create snowcloud.");
+        let database = Mutex::new(Database::build().unwrap());
+
         AppState {
-            snowcloud: crate::Snowcloud::new(crate::PRIMARY_ID, crate::EPOCH)
-                .expect("Failed to create snowcloud."),
-            database: Mutex::new(Database::new()),
+            snowcloud,
+            database,
         }
     }
 }
