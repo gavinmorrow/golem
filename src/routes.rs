@@ -1,9 +1,10 @@
 use crate::model::{user::PartialUser, AppState, User};
 use axum::{
-    extract::{Json, State},
+    extract::{Json, Path, State},
     http::StatusCode,
 };
-use log::{error, warn};
+use axum_macros::debug_handler;
+use log::{error, warn, debug};
 use std::sync::Arc;
 
 pub async fn snowflake(State(state): State<Arc<AppState>>) -> String {
@@ -53,4 +54,26 @@ pub async fn register(
     }
 
     Ok(snowflake.id().to_string())
+}
+
+#[debug_handler]
+pub async fn get_user(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<super::model::user::Id>,
+) -> Result<Json<User>, StatusCode> {
+    let database = state.database.lock().await;
+
+    let user = match database.get_user(&id) {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            debug!("User {:?} not found in database.", id);
+            return Err(StatusCode::NOT_FOUND);
+        }
+        Err(err) => {
+            error!("Failed to get user from database: {:?}", err);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    Ok(Json(user))
 }
