@@ -26,7 +26,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/register", post(routes::register))
-        .route("/snowflake", get(routes::snowflake))
+        .route("/api/snowflake", get(routes::snowflake))
         .with_state(state);
 
     axum::Server::bind(&ROOT_PATH.parse().unwrap())
