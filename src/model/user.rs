@@ -1,5 +1,4 @@
-use super::{Database, Snowflake};
-use crate::Snowcloud;
+use super::Snowflake;
 
 pub type Id = Snowflake;
 
