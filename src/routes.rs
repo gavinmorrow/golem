@@ -45,7 +45,7 @@ pub async fn register(
         name: user.name,
     };
 
-    let mut database = state.database.lock().await;
+    let database = state.database.lock().await;
 
     if let Err(err) = database.add_user(user) {
         eprintln!("Failed to add user to database: {:?}", err);
