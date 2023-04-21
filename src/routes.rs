@@ -7,6 +7,7 @@ use axum_macros::debug_handler;
 use log::{error, warn, debug};
 use std::sync::Arc;
 
+#[debug_handler]
 pub async fn snowflake(State(state): State<Arc<AppState>>) -> String {
     let snowflake = state.snowcloud.next_id();
     match snowflake {
@@ -22,6 +23,7 @@ pub async fn snowflake(State(state): State<Arc<AppState>>) -> String {
     }
 }
 
+#[debug_handler]
 pub async fn register(
     State(state): State<Arc<AppState>>,
     Json(user): Json<PartialUser>,
