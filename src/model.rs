@@ -2,10 +2,12 @@ use tokio::sync::Mutex;
 
 pub mod database;
 pub mod message;
+pub mod session;
 pub mod user;
 
 pub use database::Database;
 pub use message::Message;
+pub use session::Session;
 pub use user::User;
 
 type Snowflake = snowcloud::Snowflake<43, 8, 12>;
