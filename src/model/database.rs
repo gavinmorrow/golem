@@ -55,7 +55,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_user(&self, id: super::user::Id) -> Result<Option<User>> {
+    pub fn get_user(&self, id: &super::user::Id) -> Result<Option<User>> {
         self.conn
             .query_row("SELECT * FROM users WHERE id=?1", (id.id(),), |row| {
                 let id_row = row
@@ -91,7 +91,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_session(&self, id: super::session::Id) -> Result<Option<Session>> {
+    pub fn get_session(&self, id: &super::session::Id) -> Result<Option<Session>> {
         self.conn
             .query_row("SELECT * FROM users WHERE id=?1", (id.id(),), |row| {
                 let session_id_row = row
