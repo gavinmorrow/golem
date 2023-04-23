@@ -18,7 +18,8 @@ impl Database {
         conn.execute(
             "CREATE TABLE users (
                 id   INTEGER PRIMARY KEY,
-                name TEXT NOT NULL
+                name TEXT NOT NULL,
+                password TEXT NOT NULL
             )",
             (),
         )?;
@@ -46,7 +47,9 @@ impl Database {
 
         Ok(conn)
     }
+}
 
+impl Database {
     pub fn add_user(&self, user: User) -> Result<()> {
         self.conn.execute(
             "INSERT INTO users (id, name) VALUES (?1, ?2)",
@@ -64,6 +67,7 @@ impl Database {
                 Ok(User {
                     id: super::user::Id::try_from(id_row).expect("id from db is valid"),
                     name: row.get(1).expect("name exists in query at column 1"),
+                    password: row.get(2).expect("password exists in query at column 2"),
                 })
             })
             .optional()
@@ -78,11 +82,14 @@ impl Database {
                 Ok(User {
                     id: super::user::Id::try_from(id_row).expect("id from db is valid"),
                     name: row.get(1).expect("name exists in query at column 1"),
+                    password: row.get(2).expect("password exists in query at column 2"),
                 })
             })
             .optional()
     }
+}
 
+impl Database {
     pub fn add_session(&self, session: Session) -> Result<()> {
         self.conn.execute(
             "INSERT INTO sessions (id, user) VALUES (?1, ?2)",
@@ -106,5 +113,12 @@ impl Database {
                 })
             })
             .optional()
+    }
+}
+
+impl Database {
+    pub fn authenticate(&self, user_id: &super::user::Id, password: &String) -> Result<bool> {
+        let user = self.get_user(user_id)?;
+        Ok(user.map(|u| &u.password == password).unwrap_or(false))
     }
 }

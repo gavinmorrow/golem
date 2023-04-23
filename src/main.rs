@@ -6,6 +6,7 @@ use log::info;
 use model::AppState;
 use std::sync::Arc;
 
+mod auth;
 mod logger;
 mod model;
 mod routes;
@@ -25,6 +26,7 @@ async fn main() {
     let state = Arc::new(AppState::new());
 
     let app = Router::new()
+        .route("/api/login", post(routes::sessions::login))
         .route("/api/register", post(routes::register))
         .route("/api/user/:id", get(routes::get_user))
         .route("/api/snowflake", get(routes::snowflake))

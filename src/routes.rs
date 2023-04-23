@@ -1,11 +1,16 @@
-use crate::model::{user::PartialUser, AppState, User};
+use crate::{
+    auth,
+    model::{AppState, User},
+};
 use axum::{
     extract::{Json, Path, State},
     http::StatusCode,
 };
 use axum_macros::debug_handler;
-use log::{error, warn, debug};
+use log::{debug, error, warn};
 use std::sync::Arc;
+
+pub mod sessions;
 
 #[debug_handler]
 pub async fn snowflake(State(state): State<Arc<AppState>>) -> String {
@@ -21,6 +26,12 @@ pub async fn snowflake(State(state): State<Arc<AppState>>) -> String {
         }
         Err(err) => format!("Failed to generate snowflake: {}", err),
     }
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct PartialUser {
+    pub name: String,
+    pub password: String,
 }
 
 #[debug_handler]
@@ -43,9 +54,11 @@ pub async fn register(
     }
 
     let snowflake = snowflake.unwrap();
+    let password = auth::hash::hash_password(user.password);
     let user = User {
         id: snowflake.clone(),
         name: user.name,
+        password,
     };
 
     let database = state.database.lock().await;
