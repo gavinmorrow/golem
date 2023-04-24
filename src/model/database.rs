@@ -1,5 +1,5 @@
-use super::{Message, Session, User};
-use rusqlite::{Connection, OptionalExtension, Result};
+use super::{Session, User};
+use rusqlite::{types::FromSql, Connection, OptionalExtension, Result};
 
 pub struct Database {
     conn: Connection,
@@ -61,13 +61,10 @@ impl Database {
     pub fn get_user(&self, id: &super::user::Id) -> Result<Option<User>> {
         self.conn
             .query_row("SELECT * FROM users WHERE id=?1", (id.id(),), |row| {
-                let id_row = row
-                    .get::<usize, i64>(0)
-                    .expect("id exists in query at column 0");
                 Ok(User {
-                    id: super::user::Id::try_from(id_row).expect("id from db is valid"),
-                    name: row.get(1).expect("name exists in query at column 1"),
-                    password: row.get(2).expect("password exists in query at column 2"),
+                    id: self.get_snowflake_column(row, 0),
+                    name: self.get_column(row, 1),
+                    password: self.get_column(row, 2),
                 })
             })
             .optional()
@@ -76,13 +73,10 @@ impl Database {
     pub fn get_user_by_name(&self, name: &str) -> Result<Option<User>> {
         self.conn
             .query_row("SELECT * FROM users WHERE name=?1", (name,), |row| {
-                let id_row = row
-                    .get::<usize, i64>(0)
-                    .expect("id exists in query at column 0");
                 Ok(User {
-                    id: super::user::Id::try_from(id_row).expect("id from db is valid"),
-                    name: row.get(1).expect("name exists in query at column 1"),
-                    password: row.get(2).expect("password exists in query at column 2"),
+                    id: self.get_snowflake_column(row, 0),
+                    name: self.get_column(row, 1),
+                    password: self.get_column(row, 2),
                 })
             })
             .optional()
@@ -102,16 +96,36 @@ impl Database {
         self.conn
             .query_row("SELECT * FROM users WHERE token=?1", (token,), |row| {
                 Ok(Session {
-                    token: row
-                        .get::<usize, u64>(0)
-                        .expect("id exists in query at column 0"),
-                    user_id: super::user::Id::try_from(
-                        row.get::<usize, i64>(1)
-                            .expect("user_id exists in query at column 1"),
-                    )
-                    .expect("id from db is valid"),
+                    id: self.get_snowflake_column(row, 0),
+                    token: self.get_column(row, 1),
+                    user_id: self.get_snowflake_column(row, 2),
                 })
             })
             .optional()
+    }
+}
+
+impl Database {
+    /// Get a row from a query result.
+    /// It is just a wrapper around the [`rusqlite::Row::get()`] method,
+    /// but it panics if the value does not exist.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value does not exist, or the type is incorrect.
+    fn get_column<T: FromSql>(&self, row: &rusqlite::Row, index: usize) -> T {
+        row.get::<usize, T>(index)
+            .expect(format!("value exists at row {}", index).as_str())
+    }
+
+    /// Get a row from a query result, and parse it as a snowflake.
+    /// It is just a wrapper around the [`Database::get_column()`] method, and the [`snowcloud::Snowflake::try_from()`] method.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value does not exist, or the value is not a valid snowflake.
+    fn get_snowflake_column(&self, row: &rusqlite::Row, index: usize) -> super::Snowflake {
+        super::Snowflake::try_from(self.get_column::<i64>(row, index))
+            .expect("id from db is a valid snowflake")
     }
 }
