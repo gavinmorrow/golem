@@ -33,7 +33,7 @@ pub async fn login(
     };
 
     // Check password
-    if (!auth::hash::check_passwords(user.password, user_db.password)) {
+    if !auth::hash::check_passwords(user.password, user_db.password) {
         trace!("Password incorrect for user: {}", user_db.name);
         return Err(StatusCode::UNAUTHORIZED);
     }
