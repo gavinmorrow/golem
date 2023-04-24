@@ -39,8 +39,9 @@ pub async fn login(
     }
 
     // Generate token
+    let id = state.snowcloud.next_id().unwrap();
     let token = auth::token::generate_token();
-    let session = Session::new(token.clone(), user_db.id);
+    let session = Session::new(id, token.clone(), user_db.id);
 
     // Add token to database
     if let Err(err) = db.add_session(session) {
