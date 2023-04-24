@@ -38,7 +38,7 @@ impl Database {
 
         conn.execute(
             "CREATE TABLE sessions (
-                id      INTEGER PRIMARY KEY,
+                token   INTEGER PRIMARY KEY,
                 user    INTEGER NOT NULL,
                 FOREIGN KEY(user) REFERENCES users(id)
             )",
@@ -92,33 +92,26 @@ impl Database {
 impl Database {
     pub fn add_session(&self, session: Session) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO sessions (id, user) VALUES (?1, ?2)",
-            (session.id.id(), session.user_id.id()),
+            "INSERT INTO sessions (token, user) VALUES (?1, ?2)",
+            (session.token, session.user_id.id()),
         )?;
         Ok(())
     }
 
-    pub fn get_session(&self, id: &super::session::Id) -> Result<Option<Session>> {
+    pub fn get_session(&self, token: &super::session::Token) -> Result<Option<Session>> {
         self.conn
-            .query_row("SELECT * FROM users WHERE id=?1", (id.id(),), |row| {
-                let session_id_row = row
-                    .get::<usize, i64>(0)
-                    .expect("id exists in query at column 0");
-                let user_id_row = row
-                    .get::<usize, i64>(1)
-                    .expect("user_id exists in query at column 1");
+            .query_row("SELECT * FROM users WHERE token=?1", (token,), |row| {
                 Ok(Session {
-                    id: super::session::Id::try_from(session_id_row).expect("id from db is valid"),
-                    user_id: super::user::Id::try_from(user_id_row).expect("id from db is valid"),
+                    token: row
+                        .get::<usize, u64>(0)
+                        .expect("id exists in query at column 0"),
+                    user_id: super::user::Id::try_from(
+                        row.get::<usize, i64>(1)
+                            .expect("user_id exists in query at column 1"),
+                    )
+                    .expect("id from db is valid"),
                 })
             })
             .optional()
-    }
-}
-
-impl Database {
-    pub fn authenticate(&self, user_id: &super::user::Id, password: &String) -> Result<bool> {
-        let user = self.get_user(user_id)?;
-        Ok(user.map(|u| &u.password == password).unwrap_or(false))
     }
 }

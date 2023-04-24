@@ -1,6 +1,6 @@
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-    Argon2,
+    Argon2, PasswordHash, PasswordVerifier,
 };
 
 pub fn hash_password(password: String) -> String {
@@ -16,4 +16,16 @@ pub fn hash_password(password: String) -> String {
         .to_string();
 
     password_hash
+}
+
+/// Check if a password matches a hash.
+///
+/// # Panics
+///
+/// This function will panic if the hash is invalid.
+pub fn check_passwords(password: String, hash: String) -> bool {
+    let parsed_hash = PasswordHash::new(&hash).expect("hash is valid");
+    Argon2::default()
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok()
 }

@@ -29,7 +29,7 @@ pub async fn snowflake(State(state): State<Arc<AppState>>) -> String {
 }
 
 #[derive(Debug, serde::Deserialize)]
-struct PartialUser {
+pub struct PartialUser {
     pub name: String,
     pub password: String,
 }

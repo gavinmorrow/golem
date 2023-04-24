@@ -1,14 +1,17 @@
 use super::Snowflake;
 
-pub type Id = Snowflake;
+pub type Token = u64;
 
 pub struct Session {
-    pub id: Id,
+    pub token: Token,
     pub user_id: super::user::Id,
 }
 
 impl Session {
-    pub fn new(session_id: Id, user_id: super::user::Id) -> Session {
-        Session { id: session_id, user_id }
+    pub fn new(session_token: Token, user_id: super::user::Id) -> Session {
+        Session {
+            token: session_token,
+            user_id,
+        }
     }
 }
