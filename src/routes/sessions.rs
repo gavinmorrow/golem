@@ -1,4 +1,7 @@
-use crate::{auth, model::{AppState, Session}};
+use crate::{
+    auth,
+    model::{AppState, Session},
+};
 use axum::{
     extract::{Json, State},
     http::StatusCode,

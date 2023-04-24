@@ -11,10 +11,6 @@ pub struct Session {
 
 impl Session {
     pub fn new(id: Id, token: Token, user_id: super::user::Id) -> Session {
-        Session {
-            id,
-            token,
-            user_id,
-        }
+        Session { id, token, user_id }
     }
 }
