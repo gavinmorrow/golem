@@ -53,8 +53,8 @@ impl Database {
 impl Database {
     pub fn add_user(&self, user: User) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO users (id, name) VALUES (?1, ?2)",
-            (user.id.id(), user.name),
+            "INSERT INTO users (id, name, password) VALUES (?1, ?2, ?3)",
+            (user.id.id(), user.name, user.password),
         )?;
         Ok(())
     }
