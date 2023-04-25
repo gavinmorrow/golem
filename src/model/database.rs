@@ -1,19 +1,21 @@
 use super::{Session, User};
-use rusqlite::{types::FromSql, Connection, OptionalExtension, Result};
+use rusqlite::{types::FromSql, Connection, OptionalExtension};
+
+type Result<T> = rusqlite::Result<Option<T>>;
 
 pub struct Database {
     conn: Connection,
 }
 
-/// Build the database. 
+/// Build the database.
 impl Database {
-    pub fn build() -> Result<Database> {
+    pub fn build() -> rusqlite::Result<Database> {
         let conn = Database::init_db()?;
         let db = Database { conn };
         Ok(db)
     }
 
-    fn init_db() -> Result<Connection> {
+    fn init_db() -> rusqlite::Result<Connection> {
         let conn = Connection::open_in_memory()?;
 
         conn.execute(
@@ -53,7 +55,7 @@ impl Database {
 
 /// User stuff
 impl Database {
-    pub fn add_user(&self, user: User) -> Result<()> {
+    pub fn add_user(&self, user: User) -> rusqlite::Result<()> {
         self.conn.execute(
             "INSERT INTO users (id, name, password) VALUES (?1, ?2, ?3)",
             (user.id.id(), user.name, user.password),
@@ -61,7 +63,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_user(&self, id: &super::user::Id) -> Result<Option<User>> {
+    pub fn get_user(&self, id: &super::user::Id) -> Result<User> {
         self.conn
             .query_row("SELECT * FROM users WHERE id=?1", (id.id(),), |row| {
                 Ok(User {
@@ -73,7 +75,7 @@ impl Database {
             .optional()
     }
 
-    pub fn get_user_by_name(&self, name: &str) -> Result<Option<User>> {
+    pub fn get_user_by_name(&self, name: &str) -> Result<User> {
         self.conn
             .query_row("SELECT * FROM users WHERE name=?1", (name,), |row| {
                 Ok(User {
@@ -88,7 +90,7 @@ impl Database {
 
 /// Session stuff
 impl Database {
-    pub fn add_session(&self, session: Session) -> Result<()> {
+    pub fn add_session(&self, session: Session) -> rusqlite::Result<()> {
         self.conn.execute(
             "INSERT INTO sessions (id, token, user) VALUES (?1, ?2, ?3)",
             (session.id.id(), session.token, session.user_id.id()),
@@ -96,7 +98,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_session_from_token(&self, token: &super::session::Token) -> Result<Option<Session>> {
+    pub fn get_session_from_token(&self, token: &super::session::Token) -> Result<Session> {
         self.conn
             .query_row("SELECT * FROM sessions WHERE token=?1", (token,), |row| {
                 Ok(Session {
