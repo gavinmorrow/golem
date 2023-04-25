@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use tokio::sync::Mutex;
 
 pub mod database;
@@ -12,16 +14,17 @@ pub use user::User;
 
 type Snowflake = snowcloud::Snowflake<43, 8, 12>;
 
+#[derive(Clone)]
 pub struct AppState {
     pub snowcloud: crate::Snowcloud,
-    pub database: Mutex<Database>,
+    pub database: Arc<Mutex<Database>>,
 }
 
 impl AppState {
     pub fn new() -> AppState {
         let snowcloud = crate::Snowcloud::new(crate::PRIMARY_ID, crate::EPOCH)
             .expect("Failed to create snowcloud.");
-        let database = Mutex::new(Database::build().unwrap());
+        let database = Arc::new(Mutex::new(Database::build().unwrap()));
 
         AppState {
             snowcloud,
