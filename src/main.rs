@@ -27,7 +27,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/login", post(routes::sessions::login))
-        .route("/api/register", post(routes::register))
+        .route("/api/register", post(routes::register::register))
         .route("/api/user/:id", get(routes::get_user))
         .route("/api/snowflake", get(routes::snowflake))
         .with_state(state);
