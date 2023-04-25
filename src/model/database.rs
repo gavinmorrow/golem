@@ -98,6 +98,18 @@ impl Database {
         Ok(())
     }
 
+    pub fn get_session(&self, id: &super::session::Id) -> Result<Session> {
+        self.conn
+            .query_row("SELECT * FROM sessions WHERE id=?1", (id.id(),), |row| {
+                Ok(Session {
+                    id: self.get_snowflake_column(row, 0),
+                    token: self.get_column(row, 1),
+                    user_id: self.get_snowflake_column(row, 2),
+                })
+            })
+            .optional()
+    }
+
     pub fn get_session_from_token(&self, token: &super::session::Token) -> Result<Session> {
         self.conn
             .query_row("SELECT * FROM sessions WHERE token=?1", (token,), |row| {
