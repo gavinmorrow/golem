@@ -39,7 +39,7 @@ impl Database {
         conn.execute(
             "CREATE TABLE sessions (
                 id      INTEGER PRIMARY KEY,
-                token   INTEGER PRIMARY KEY,
+                token   INTEGER,
                 user    INTEGER NOT NULL,
                 FOREIGN KEY(user) REFERENCES users(id)
             )",
