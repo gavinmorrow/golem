@@ -7,6 +7,7 @@ use axum_macros::debug_handler;
 use log::{debug, error};
 use std::sync::Arc;
 
+pub mod auth;
 pub mod register;
 pub mod sessions;
 
