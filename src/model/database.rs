@@ -38,6 +38,7 @@ impl Database {
 
         conn.execute(
             "CREATE TABLE sessions (
+                id      INTEGER PRIMARY KEY,
                 token   INTEGER PRIMARY KEY,
                 user    INTEGER NOT NULL,
                 FOREIGN KEY(user) REFERENCES users(id)
@@ -86,8 +87,8 @@ impl Database {
 impl Database {
     pub fn add_session(&self, session: Session) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO sessions (token, user) VALUES (?1, ?2)",
-            (session.token, session.user_id.id()),
+            "INSERT INTO sessions (id, token, user) VALUES (?1, ?2, ?3)",
+            (session.id.id(), session.token, session.user_id.id()),
         )?;
         Ok(())
     }
