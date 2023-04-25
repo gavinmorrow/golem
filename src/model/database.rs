@@ -95,7 +95,7 @@ impl Database {
 
     pub fn get_session(&self, token: &super::session::Token) -> Result<Option<Session>> {
         self.conn
-            .query_row("SELECT * FROM users WHERE token=?1", (token,), |row| {
+            .query_row("SELECT * FROM sessions WHERE token=?1", (token,), |row| {
                 Ok(Session {
                     id: self.get_snowflake_column(row, 0),
                     token: self.get_column(row, 1),
