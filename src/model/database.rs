@@ -1,7 +1,7 @@
 use super::{Session, User};
-use rusqlite::{types::FromSql, Connection, OptionalExtension};
+use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult};
 
-type Result<T> = rusqlite::Result<Option<T>>;
+type Result<T> = SqlResult<Option<T>>;
 
 pub struct Database {
     conn: Connection,
@@ -9,13 +9,13 @@ pub struct Database {
 
 /// Build the database.
 impl Database {
-    pub fn build() -> rusqlite::Result<Database> {
+    pub fn build() -> SqlResult<Database> {
         let conn = Database::init_db()?;
         let db = Database { conn };
         Ok(db)
     }
 
-    fn init_db() -> rusqlite::Result<Connection> {
+    fn init_db() -> SqlResult<Connection> {
         let conn = Connection::open_in_memory()?;
 
         conn.execute(
@@ -55,7 +55,7 @@ impl Database {
 
 /// User stuff
 impl Database {
-    pub fn add_user(&self, user: User) -> rusqlite::Result<()> {
+    pub fn add_user(&self, user: User) -> SqlResult<()> {
         self.conn.execute(
             "INSERT INTO users (id, name, password) VALUES (?1, ?2, ?3)",
             (user.id.id(), user.name, user.password),
@@ -90,7 +90,7 @@ impl Database {
 
 /// Session stuff
 impl Database {
-    pub fn add_session(&self, session: Session) -> rusqlite::Result<()> {
+    pub fn add_session(&self, session: Session) -> SqlResult<()> {
         self.conn.execute(
             "INSERT INTO sessions (id, token, user) VALUES (?1, ?2, ?3)",
             (session.id.id(), session.token, session.user_id.id()),
