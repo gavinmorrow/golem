@@ -96,7 +96,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_session(&self, token: &super::session::Token) -> Result<Option<Session>> {
+    pub fn get_session_from_token(&self, token: &super::session::Token) -> Result<Option<Session>> {
         self.conn
             .query_row("SELECT * FROM sessions WHERE token=?1", (token,), |row| {
                 Ok(Session {

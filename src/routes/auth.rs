@@ -43,7 +43,7 @@ fn parse_token(token: &str) -> Result<Token, StatusCode> {
 
 fn verify_session(token: u64, database: MutexGuard<Database>) -> Result<Session, StatusCode> {
     // Get and verify session
-    match database.get_session(&token) {
+    match database.get_session_from_token(&token) {
         Ok(Some(session)) => return Ok(session),
         Ok(None) => {
             debug!("Session {} not found in database", token);
