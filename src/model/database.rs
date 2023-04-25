@@ -5,6 +5,7 @@ pub struct Database {
     conn: Connection,
 }
 
+/// Build the database. 
 impl Database {
     pub fn build() -> Result<Database> {
         let conn = Database::init_db()?;
@@ -50,6 +51,7 @@ impl Database {
     }
 }
 
+/// User stuff
 impl Database {
     pub fn add_user(&self, user: User) -> Result<()> {
         self.conn.execute(
@@ -84,6 +86,7 @@ impl Database {
     }
 }
 
+/// Session stuff
 impl Database {
     pub fn add_session(&self, session: Session) -> Result<()> {
         self.conn.execute(
@@ -106,6 +109,7 @@ impl Database {
     }
 }
 
+/// Helper methods
 impl Database {
     /// Get a row from a query result.
     /// It is just a wrapper around the [`rusqlite::Row::get()`] method,
