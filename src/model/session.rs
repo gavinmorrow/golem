@@ -3,6 +3,7 @@ use super::Snowflake;
 pub type Id = Snowflake;
 pub type Token = u64;
 
+#[derive(Clone, Debug)]
 pub struct Session {
     pub id: Id,
     pub token: Token,

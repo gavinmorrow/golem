@@ -5,6 +5,7 @@ use crate::{
 use axum::{
     extract::{Json, State},
     http::StatusCode,
+    Extension,
 };
 use axum_macros::debug_handler;
 use log::{debug, error, trace};
@@ -53,4 +54,21 @@ pub async fn login(
     }
 
     Ok(token.to_string())
+}
+
+#[debug_handler]
+pub async fn logout(
+    State(state): State<Arc<AppState>>,
+    Extension(session): Extension<Session>,
+) -> StatusCode {
+    let database = state.database.lock().await;
+    let id = session.id;
+
+    match database.delete_session(&id) {
+        Ok(_) => StatusCode::RESET_CONTENT,
+        Err(err) => {
+            error!("Failed to delete session from database: {}", err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        }
+    }
 }

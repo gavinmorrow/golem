@@ -121,6 +121,12 @@ impl Database {
             })
             .optional()
     }
+
+    pub fn delete_session(&self, id: &super::session::Id) -> SqlResult<()> {
+        self.conn
+            .execute("DELETE FROM sessions WHERE id=?1", (id.id(),))?;
+        Ok(())
+    }
 }
 
 /// Helper methods
