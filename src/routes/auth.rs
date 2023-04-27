@@ -5,7 +5,7 @@ use axum::{
     headers::{authorization::Bearer, Authorization},
     http::{Request, StatusCode},
     middleware::Next,
-    response::Response,
+    response::{IntoResponse, Response},
 };
 use log::{debug, error, trace};
 use tokio::sync::MutexGuard;
@@ -24,8 +24,9 @@ pub async fn authenticate<B>(
 
     let database = state.database.lock().await;
     let Ok(session) = verify_session(token, database) else {
-        return StatusCode::UNAUTHORIZED;
+        return StatusCode::UNAUTHORIZED.into_response();
     };
+
     request.extensions_mut().insert(session);
 
     trace!("Request authenticated with a session token of {}", token);
