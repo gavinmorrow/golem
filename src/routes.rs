@@ -11,6 +11,7 @@ pub mod auth;
 pub mod messages;
 pub mod register;
 pub mod sessions;
+pub mod ws;
 
 #[debug_handler]
 pub async fn snowflake(State(state): State<Arc<AppState>>) -> String {

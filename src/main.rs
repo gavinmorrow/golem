@@ -28,8 +28,8 @@ async fn main() {
     let app = Router::new()
         .route("/api/user/:id", get(routes::get_user))
         .route("/api/logout", post(routes::sessions::logout))
-        .route("/api/snapshot", get(routes::messages::get_snapshot))
         .route("/api/message", post(routes::messages::post_message))
+        .nest("/api/ws", routes::ws::router())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             routes::auth::authenticate,
@@ -37,6 +37,7 @@ async fn main() {
         .route("/api/login", post(routes::sessions::login))
         .route("/api/register", post(routes::register::register))
         .route("/api/snowflake", get(routes::snowflake))
+        .route("/api/snapshot", get(routes::messages::get_snapshot))
         .with_state(state.into());
 
     axum::Server::bind(&ROOT_PATH.parse().unwrap())
