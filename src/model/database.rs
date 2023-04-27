@@ -1,5 +1,5 @@
 use super::{Message, Session, User};
-use log::{debug};
+use log::debug;
 use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult};
 
 type Result<T> = SqlResult<Option<T>>;
@@ -95,7 +95,7 @@ impl Database {
     pub fn get_recent_messages(&self) -> SqlResult<Vec<Message>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT * FROM messages ORDER BY id DESC LIMIT 100")?;
+            .prepare("SELECT * FROM messages WHERE parent=NULL ORDER BY id DESC LIMIT 100")?;
         let rows = stmt.query_map([], |row| {
             Ok(Message {
                 id: self.get_snowflake_column(row, 0),
