@@ -21,6 +21,7 @@ pub async fn get_snapshot(
     }
 }
 
+#[derive(Debug, serde::Deserialize)]
 /// Basically just a [`Message`](crate::model::Message) without an id.
 pub struct SendMessage {
 	pub author: crate::model::user::Id,
@@ -31,7 +32,7 @@ pub struct SendMessage {
 #[debug_handler]
 pub async fn post_message(
     State(state): State<Arc<AppState>>,
-    Json(message): Json<Message>,
+    Json(message): Json<SendMessage>,
 ) -> Result<String, StatusCode> {
 	// Generate an id
 	let id = state.snowcloud.next_id().expect("Failed to generate snowflake.");
@@ -40,7 +41,9 @@ pub async fn post_message(
 	// Create a Message
 	let message = Message {
 		id,
-		..message
+		author: message.author,
+		parent: message.parent,
+		content: message.content,
 	};
 	
 	// Add to database

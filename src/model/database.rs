@@ -1,4 +1,5 @@
-use super::{Message, Session, User, Snowflake};
+use super::{Message, Session, User};
+use log::{debug};
 use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult};
 
 type Result<T> = SqlResult<Option<T>>;
@@ -20,7 +21,7 @@ impl Database {
 
         conn.execute(
             "CREATE TABLE users (
-                id   INTEGER PRIMARY KEY,
+                id   INT PRIMARY KEY,
                 name TEXT NOT NULL,
                 password TEXT NOT NULL
             )",
@@ -29,9 +30,9 @@ impl Database {
 
         conn.execute(
             "CREATE TABLE messages (
-                id      INTEGER PRIMARY KEY,
-                author  INTEGER NOT NULL,
-                parent  INTEGER,
+                id      INT PRIMARY KEY,
+                author  INT NOT NULL,
+                parent  INT,
                 content TEXT NOT NULL,
                 FOREIGN KEY(author) REFERENCES users(id),
                 FOREIGN KEY(parent) REFERENCES messages(id)
@@ -41,9 +42,9 @@ impl Database {
 
         conn.execute(
             "CREATE TABLE sessions (
-                id      INTEGER PRIMARY KEY,
-                token   INTEGER,
-                user    INTEGER NOT NULL,
+                id      INT PRIMARY KEY,
+                token   INT,
+                user    INT NOT NULL,
                 FOREIGN KEY(user) REFERENCES users(id)
             )",
             (),
@@ -56,6 +57,7 @@ impl Database {
 /// User stuff
 impl Database {
     pub fn add_user(&self, user: User) -> SqlResult<()> {
+        debug!("Adding user {} to database", user.id.id());
         self.conn.execute(
             "INSERT INTO users (id, name, password) VALUES (?1, ?2, ?3)",
             (user.id.id(), user.name, user.password),
@@ -128,6 +130,7 @@ impl Database {
 /// Session stuff
 impl Database {
     pub fn add_session(&self, session: Session) -> SqlResult<()> {
+        debug!("Adding session: {:?}", session);
         self.conn.execute(
             "INSERT INTO sessions (id, token, user) VALUES (?1, ?2, ?3)",
             (session.id.id(), session.token, session.user_id.id()),
@@ -160,6 +163,7 @@ impl Database {
     }
 
     pub fn delete_session(&self, id: &super::session::Id) -> SqlResult<()> {
+        debug!("Deleting session {}", id.id());
         self.conn
             .execute("DELETE FROM sessions WHERE id=?1", (id.id(),))?;
         Ok(())

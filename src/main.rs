@@ -30,7 +30,7 @@ async fn main() {
         .route("/api/logout", post(routes::sessions::logout))
         .route("/api/snapshot", get(routes::messages::get_snapshot))
         .route("/api/message", post(routes::messages::post_message))
-        .route_layer(middleware::from_fn_with_state(
+        .layer(middleware::from_fn_with_state(
             state.clone(),
             routes::auth::authenticate,
         ))
