@@ -1,5 +1,3 @@
-use std::sync::Mutex;
-
 use axum::{
     extract::{State, TypedHeader},
     headers::{authorization::Bearer, Authorization},
