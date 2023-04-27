@@ -1,4 +1,5 @@
-use super::{Session, User};
+use super::{Message, Session, User};
+use log::{debug};
 use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult};
 
 type Result<T> = SqlResult<Option<T>>;
@@ -20,7 +21,7 @@ impl Database {
 
         conn.execute(
             "CREATE TABLE users (
-                id   INTEGER PRIMARY KEY,
+                id   INT PRIMARY KEY,
                 name TEXT NOT NULL,
                 password TEXT NOT NULL
             )",
@@ -29,9 +30,9 @@ impl Database {
 
         conn.execute(
             "CREATE TABLE messages (
-                id      INTEGER PRIMARY KEY,
-                author  INTEGER NOT NULL,
-                parent  INTEGER,
+                id      INT PRIMARY KEY,
+                author  INT NOT NULL,
+                parent  INT,
                 content TEXT NOT NULL,
                 FOREIGN KEY(author) REFERENCES users(id),
                 FOREIGN KEY(parent) REFERENCES messages(id)
@@ -41,9 +42,9 @@ impl Database {
 
         conn.execute(
             "CREATE TABLE sessions (
-                id      INTEGER PRIMARY KEY,
-                token   INTEGER,
-                user    INTEGER NOT NULL,
+                id      INT PRIMARY KEY,
+                token   INT,
+                user    INT NOT NULL,
                 FOREIGN KEY(user) REFERENCES users(id)
             )",
             (),
@@ -56,6 +57,7 @@ impl Database {
 /// User stuff
 impl Database {
     pub fn add_user(&self, user: User) -> SqlResult<()> {
+        debug!("Adding user {} to database", user.id.id());
         self.conn.execute(
             "INSERT INTO users (id, name, password) VALUES (?1, ?2, ?3)",
             (user.id.id(), user.name, user.password),
@@ -88,9 +90,47 @@ impl Database {
     }
 }
 
+/// Messages stuff
+impl Database {
+    pub fn get_recent_messages(&self) -> SqlResult<Vec<Message>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM messages ORDER BY id DESC LIMIT 100")?;
+        let rows = stmt.query_map([], |row| {
+            Ok(Message {
+                id: self.get_snowflake_column(row, 0),
+                author: self.get_snowflake_column(row, 1),
+                parent: self.get_snowflake_column_optional(row, 2),
+                content: self.get_column(row, 3),
+            })
+        })?;
+
+        let mut messages = Vec::new();
+        for message in rows {
+            messages.push(message?);
+        }
+
+        Ok(messages)
+    }
+
+    pub fn add_message(&self, message: Message) -> SqlResult<()> {
+        self.conn.execute(
+            "INSERT INTO messages (id, author, parent, content) VALUES (?1, ?2, ?3, ?4)",
+            (
+                message.id.id(),
+                message.author.id(),
+                message.parent.map(|id| id.id()),
+                message.content,
+            ),
+        )?;
+        Ok(())
+    }
+}
+
 /// Session stuff
 impl Database {
     pub fn add_session(&self, session: Session) -> SqlResult<()> {
+        debug!("Adding session: {:?}", session);
         self.conn.execute(
             "INSERT INTO sessions (id, token, user) VALUES (?1, ?2, ?3)",
             (session.id.id(), session.token, session.user_id.id()),
@@ -123,6 +163,7 @@ impl Database {
     }
 
     pub fn delete_session(&self, id: &super::session::Id) -> SqlResult<()> {
+        debug!("Deleting session {}", id.id());
         self.conn
             .execute("DELETE FROM sessions WHERE id=?1", (id.id(),))?;
         Ok(())
@@ -152,5 +193,16 @@ impl Database {
     fn get_snowflake_column(&self, row: &rusqlite::Row, index: usize) -> super::Snowflake {
         super::Snowflake::try_from(self.get_column::<i64>(row, index))
             .expect("id from db is a valid snowflake")
+    }
+
+    /// Gets a row from a query result, and parse it as a snowflake.
+    /// It is just a wrapper around the [`Database::get_column()`] method, and the [`snowcloud::Snowflake::try_from()`] method.
+    fn get_snowflake_column_optional(
+        &self,
+        row: &rusqlite::Row,
+        index: usize,
+    ) -> Option<super::Snowflake> {
+        let Ok(Some(id)) = row.get::<usize, Option<i64>>(index) else { return None };
+        super::Snowflake::try_from(id).ok()
     }
 }

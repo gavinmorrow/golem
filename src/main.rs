@@ -28,7 +28,9 @@ async fn main() {
     let app = Router::new()
         .route("/api/user/:id", get(routes::get_user))
         .route("/api/logout", post(routes::sessions::logout))
-        .route_layer(middleware::from_fn_with_state(
+        .route("/api/snapshot", get(routes::messages::get_snapshot))
+        .route("/api/message", post(routes::messages::post_message))
+        .layer(middleware::from_fn_with_state(
             state.clone(),
             routes::auth::authenticate,
         ))

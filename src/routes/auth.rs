@@ -7,7 +7,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use log::{debug, error};
+use log::{debug, error, trace};
 use tokio::sync::MutexGuard;
 
 use crate::model::{session::Token, AppState, Database, Session};
@@ -23,8 +23,12 @@ pub async fn authenticate<B>(
     let token = parse_token(token).unwrap();
 
     let database = state.database.lock().await;
-    let session = verify_session(token, database).unwrap();
-    request.extensions_mut().insert(Mutex::new(session));
+    let Ok(session) = verify_session(token, database) else {
+        return StatusCode::UNAUTHORIZED;
+    };
+    request.extensions_mut().insert(session);
+
+    trace!("Request authenticated with a session token of {}", token);
 
     // Continue
     let response = next.run(request).await;
