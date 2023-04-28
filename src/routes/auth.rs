@@ -1,6 +1,6 @@
 use axum::{
     extract::{State, TypedHeader},
-    headers::{authorization::Bearer, Authorization},
+    headers::{authorization::Bearer, Authorization, Cookie},
     http::{Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
@@ -11,18 +11,26 @@ use tokio::sync::MutexGuard;
 use crate::model::{session::Token, AppState, Database, Session};
 
 pub async fn authenticate<B>(
-    TypedHeader(auth_header): TypedHeader<Authorization<Bearer>>,
+    TypedHeader(cookies): TypedHeader<Cookie>,
     State(state): State<AppState>,
     mut request: Request<B>,
     next: Next<B>,
 ) -> Response {
+    // Get token out of cookies
+    let Some(token) = cookies.get("token") else {
+        trace!("No token cookie found");
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+
     // Parse token
-    let token = auth_header.token();
-    let token = parse_token(token).unwrap();
+    let Some(token) = parse_token(token) else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
 
     let database = state.database.lock().await;
-    let Ok(session) = verify_session(token, database) else {
-        return StatusCode::UNAUTHORIZED.into_response();
+    let session = match verify_session(token, database) {
+        Ok(session) => session,
+        Err(status_code) => return status_code.into_response(),
     };
 
     request.extensions_mut().insert(session);
@@ -34,14 +42,8 @@ pub async fn authenticate<B>(
     response
 }
 
-fn parse_token(token: &str) -> Result<Token, StatusCode> {
-    let token = token.parse::<u64>();
-
-    if token.is_err() {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-
-    Ok(token.unwrap())
+fn parse_token(token: &str) -> Option<Token> {
+    token.parse::<u64>().ok()
 }
 
 fn verify_session(token: u64, database: MutexGuard<Database>) -> Result<Session, StatusCode> {
