@@ -1,14 +1,16 @@
 use axum::{
     extract::{State, TypedHeader},
-    headers::{authorization::Bearer, Authorization, Cookie},
+    headers::{Cookie},
     http::{Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use log::{debug, error, trace};
-use tokio::sync::MutexGuard;
+use log::{trace};
 
-use crate::model::{session::Token, AppState, Database, Session};
+use crate::{
+    auth,
+    model::{session::Token, AppState},
+};
 
 pub async fn authenticate<B>(
     TypedHeader(cookies): TypedHeader<Cookie>,
@@ -28,9 +30,14 @@ pub async fn authenticate<B>(
     };
 
     let database = state.database.lock().await;
-    let session = match verify_session(token, database) {
+    let session = match auth::verify_session(token, database) {
         Ok(session) => session,
-        Err(status_code) => return status_code.into_response(),
+        Err(crate::auth::verify_session::Error::SessionNotFound) => {
+            return StatusCode::UNAUTHORIZED.into_response()
+        }
+        Err(crate::auth::verify_session::Error::DatabaseError) => {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     };
 
     request.extensions_mut().insert(session);
@@ -44,19 +51,4 @@ pub async fn authenticate<B>(
 
 fn parse_token(token: &str) -> Option<Token> {
     token.parse::<u64>().ok()
-}
-
-fn verify_session(token: u64, database: MutexGuard<Database>) -> Result<Session, StatusCode> {
-    // Get and verify session
-    match database.get_session_from_token(&token) {
-        Ok(Some(session)) => return Ok(session),
-        Ok(None) => {
-            debug!("Session {} not found in database", token);
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-        Err(err) => {
-            error!("Failed to get session from database: {}", err);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
-    };
 }
