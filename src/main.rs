@@ -29,11 +29,11 @@ async fn main() {
         .route("/api/user/:id", get(routes::get_user))
         .route("/api/logout", post(routes::sessions::logout))
         .route("/api/message", post(routes::messages::post_message))
-        .nest("/api/ws", routes::ws::router())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             routes::auth::authenticate,
         ))
+        .nest("/api/ws", routes::ws::router())
         .route("/api/login", post(routes::sessions::login))
         .route("/api/register", post(routes::register::register))
         .route("/api/snowflake", get(routes::snowflake))
