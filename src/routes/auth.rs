@@ -1,11 +1,11 @@
 use axum::{
     extract::{State, TypedHeader},
-    headers::{Cookie},
+    headers::Cookie,
     http::{Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use log::{trace};
+use log::trace;
 
 use crate::{
     auth,

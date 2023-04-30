@@ -1,6 +1,6 @@
-use super::{Message, Session, User};
+use super::{Message, Session, Snowflake, User};
 use log::debug;
-use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult};
+use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult, Row};
 
 type Result<T> = SqlResult<Option<T>>;
 
@@ -92,38 +92,92 @@ impl Database {
 
 /// Messages stuff
 impl Database {
+    // FIXME: Only selects top level messages
     pub fn get_recent_messages(&self) -> SqlResult<Vec<Message>> {
+        self.get_messages(None, 100)
+    }
+
+    /// Get the `amount` messages before the given message.
+    /// If `before` is `None`, get the `amount` most recent messages.
+    ///
+    /// This will get at *least* `amount` (*top level*) messages, but may get more.
+    ///
+    /// This will only get top level messages.
+    pub fn get_messages(&self, before: Option<Snowflake>, amount: u8) -> SqlResult<Vec<Message>> {
+        // Get top level messages
+        let mut stmt = self.conn.prepare(
+            "SELECT * FROM messages WHERE parent IS NULL AND id <= ?1 ORDER BY id DESC LIMIT ?2",
+        )?;
+        let messages = stmt
+            .query_map((before.map(|id| id.id()), amount), |row| {
+                self.map_message(row)
+            })?
+            .collect::<SqlResult<Vec<_>>>();
+
+        messages
+    }
+
+    pub fn get_children_of(
+        &self,
+        message: Option<&Snowflake>,
+        depth: u8,
+    ) -> SqlResult<Vec<Message>> {
+        // Return an empty vector if the depth is 0
+        if depth == 0 {
+            return Ok(Vec::new());
+        }
+
+        // Start by getting only the direct children of the given message
+        // Then, for each child, get the children of that child, and so on
+        // until we reach the given depth
+
         let mut stmt = self
             .conn
-            .prepare("SELECT * FROM messages WHERE parent=NULL ORDER BY id DESC LIMIT 100")?;
-        let rows = stmt.query_map([], |row| {
-            Ok(Message {
-                id: self.get_snowflake_column(row, 0),
-                author: self.get_snowflake_column(row, 1),
-                parent: self.get_snowflake_column_optional(row, 2),
-                content: self.get_column(row, 3),
+            .prepare("SELECT * FROM messages WHERE parent=?1")?;
+
+        let mut direct_children: Vec<Message> = stmt
+            .query_map((message.map(|id| id.id()),), |row| self.map_message(row))?
+            // Safe b/c the values are all set to be `Ok` above
+            .map(|msg| msg.unwrap())
+            .collect();
+
+        let mut children: Vec<Message> = direct_children
+            .iter()
+            .map(|child| self.get_children_of(Some(&child.id), depth - 1))
+            .flat_map(|result| match result {
+                Ok(vec) => vec.into_iter().map(|item| Ok(item)).collect(),
+                Err(er) => vec![Err(er)],
             })
-        })?;
+            .collect::<SqlResult<_>>()?;
 
         let mut messages = Vec::new();
-        for message in rows {
-            messages.push(message?);
-        }
+        messages.append(&mut direct_children);
+        messages.append(&mut children);
+        messages.sort_unstable();
 
         Ok(messages)
     }
 
-    pub fn add_message(&self, message: Message) -> SqlResult<()> {
+    pub fn add_message(&self, message: &Message) -> SqlResult<()> {
         self.conn.execute(
             "INSERT INTO messages (id, author, parent, content) VALUES (?1, ?2, ?3, ?4)",
             (
                 message.id.id(),
                 message.author.id(),
-                message.parent.map(|id| id.id()),
-                message.content,
+                message.parent.as_ref().map(|id| id.id()),
+                <String as AsRef<str>>::as_ref(&message.content),
             ),
         )?;
         Ok(())
+    }
+
+    fn map_message(&self, row: &Row) -> SqlResult<Message> {
+        Ok(Message {
+            id: self.get_snowflake_column(row, 0),
+            author: self.get_snowflake_column(row, 1),
+            parent: self.get_snowflake_column_optional(row, 2),
+            content: self.get_column(row, 3),
+        })
     }
 }
 
@@ -136,18 +190,6 @@ impl Database {
             (session.id.id(), session.token, session.user_id.id()),
         )?;
         Ok(())
-    }
-
-    pub fn get_session(&self, id: &super::session::Id) -> Result<Session> {
-        self.conn
-            .query_row("SELECT * FROM sessions WHERE id=?1", (id.id(),), |row| {
-                Ok(Session {
-                    id: self.get_snowflake_column(row, 0),
-                    token: self.get_column(row, 1),
-                    user_id: self.get_snowflake_column(row, 2),
-                })
-            })
-            .optional()
     }
 
     pub fn get_session_from_token(&self, token: &super::session::Token) -> Result<Session> {
