@@ -17,7 +17,7 @@ impl Database {
     }
 
     fn init_db() -> SqlResult<Connection> {
-        let conn = Connection::open_in_memory()?;
+        let conn = Connection::open("./db.sqlite3")?;
 
         conn.execute(
             "CREATE TABLE IF NOT EXISTS users (
