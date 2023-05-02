@@ -31,4 +31,8 @@ impl AppState {
             database,
         }
     }
+
+    pub fn next_snowflake(&self) -> Snowflake {
+        self.snowcloud.next_id().unwrap()
+    }
 }
