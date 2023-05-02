@@ -32,7 +32,7 @@ async fn main() {
             state.clone(),
             routes::auth::authenticate,
         ))
-        .nest("/api/ws", routes::ws::router())
+        .nest("/api/ws", routes::ws::router(state.clone().into()))
         .route("/api/login", post(routes::sessions::login))
         .route("/api/register", post(routes::register::register))
         .route("/api/snowflake", get(routes::snowflake))
