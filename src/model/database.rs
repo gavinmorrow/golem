@@ -20,7 +20,7 @@ impl Database {
         let conn = Connection::open_in_memory()?;
 
         conn.execute(
-            "CREATE TABLE users (
+            "CREATE TABLE IF NOT EXISTS users (
                 id   INT PRIMARY KEY,
                 name TEXT NOT NULL,
                 password TEXT NOT NULL
@@ -29,7 +29,7 @@ impl Database {
         )?;
 
         conn.execute(
-            "CREATE TABLE messages (
+            "CREATE TABLE IF NOT EXISTS messages (
                 id      INT PRIMARY KEY,
                 author  INT NOT NULL,
                 parent  INT,
@@ -41,7 +41,7 @@ impl Database {
         )?;
 
         conn.execute(
-            "CREATE TABLE sessions (
+            "CREATE TABLE IF NOT EXISTS sessions (
                 id      INT PRIMARY KEY,
                 token   INT,
                 user    INT NOT NULL,
