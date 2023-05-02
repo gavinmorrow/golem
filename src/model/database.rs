@@ -99,7 +99,22 @@ impl Database {
 impl Database {
     // FIXME: Only selects top level messages
     pub fn get_recent_messages(&self) -> SqlResult<Vec<Message>> {
-        self.get_messages(None, 100)
+        self.get_some_messages(None, 100)
+    }
+
+    pub fn get_messages(&self) -> SqlResult<Vec<Message>> {
+        trace!("Getting all messages");
+
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM messages ORDER BY id DESC")?;
+        let messages = stmt
+            .query_map((), |row| self.map_message(row))?
+            .collect::<SqlResult<Vec<_>>>();
+
+        trace!("Got all messages");
+
+        messages
     }
 
     /// Get the `amount` messages before the given message.
@@ -108,7 +123,11 @@ impl Database {
     /// This will get at *least* `amount` (*top level*) messages, but may get more.
     ///
     /// This will only get top level messages.
-    pub fn get_messages(&self, before: Option<Snowflake>, amount: u8) -> SqlResult<Vec<Message>> {
+    pub fn get_some_messages(
+        &self,
+        before: Option<Snowflake>,
+        amount: u8,
+    ) -> SqlResult<Vec<Message>> {
         // Get top level messages
         let mut stmt = self.conn.prepare(
             "SELECT * FROM messages WHERE parent IS NULL AND id <= ?1 ORDER BY id DESC LIMIT ?2",
