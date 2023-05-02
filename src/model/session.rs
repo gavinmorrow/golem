@@ -1,3 +1,5 @@
+use crate::auth;
+
 use super::Snowflake;
 
 pub type Id = Snowflake;
@@ -12,6 +14,13 @@ pub struct Session {
 
 impl Session {
     pub fn new(id: Id, token: Token, user_id: super::user::Id) -> Session {
+        Session { id, token, user_id }
+    }
+
+    pub fn generate(id: Id, user_id: super::user::Id) -> Session {
+        // Generate token
+        let token = auth::token::generate_token();
+
         Session { id, token, user_id }
     }
 }
