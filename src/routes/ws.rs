@@ -150,10 +150,7 @@ async fn handle_message(
         ClientMsg::Pong => Continue,
         ClientMsg::Message(message) => {
             // Generate an id
-            let id = state
-                .snowcloud
-                .next_id()
-                .expect("Failed to generate snowflake.");
+            let id = state.next_snowflake();
 
             // Get author from session
             if session.is_none() {
