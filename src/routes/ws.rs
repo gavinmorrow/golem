@@ -143,11 +143,7 @@ async fn handle_message(
             let success = auth::hash::check_passwords(user.password, user_db.password);
 
             // set session
-            *session = Some(Session {
-                id: todo!(),
-                token: todo!(),
-                user_id: todo!(),
-            });
+            *session = Some(Session::generate(state.next_snowflake(), user_db.id));
 
             Reply(ServerMsg::Authenticate { success })
         }
