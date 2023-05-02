@@ -11,20 +11,34 @@ use axum::{
 };
 use axum_macros::debug_handler;
 use log::{debug, error, trace};
+use tokio::sync::broadcast;
 
 use crate::{
     auth,
     model::{AppState, Message, Session},
 };
 
-pub fn router() -> Router<Arc<AppState>> {
-    Router::<Arc<AppState>>::new().route("/", get(handler))
+struct WsState {
+    appstate: Arc<AppState>,
+    tx: broadcast::Sender<ServerMsg>,
+}
+
+pub fn router(state: Arc<AppState>) -> Router<Arc<AppState>> {
+    let (tx, _) = broadcast::channel(10);
+    let state = Arc::new(WsState {
+        appstate: state,
+        tx,
+    });
+
+    Router::<Arc<WsState>>::new()
+        .route("/", get(handler))
+        .with_state(state)
 }
 
 #[debug_handler]
-async fn handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Response {
+async fn handler(ws: WebSocketUpgrade, State(state): State<Arc<WsState>>) -> Response {
     trace!("ws connection requested");
-    ws.on_upgrade(|ws| handle_ws(ws, state))
+    ws.on_upgrade(move |ws| handle_ws(ws, state.appstate.clone(), state.tx.clone()))
 }
 
 // Naming note (for types and variables):
@@ -35,10 +49,11 @@ async fn handler(ws: WebSocketUpgrade, State(state): State<Arc<AppState>>) -> Re
 // - Use `message` when you're referring to a
 //   message in the database/chat
 
-async fn handle_ws(mut ws: WebSocket, state: Arc<AppState>) {
+async fn handle_ws(mut ws: WebSocket, state: Arc<AppState>, tx: broadcast::Sender<ServerMsg>) {
     trace!("ws connection opened");
 
     let mut session: Option<Session> = None;
+    let mut rx = tx.subscribe();
 
     while let Some(msg) = ws.recv().await {
         let Ok(msg) = msg else {
@@ -60,11 +75,27 @@ async fn handle_ws(mut ws: WebSocket, state: Arc<AppState>) {
         match handle_message(msg, &mut session, state.clone()).await {
             HandlerResult::Continue => continue,
             HandlerResult::Reply(msg) => {
+                debug!("sending message: {:?}", msg);
                 if ws.send(Into::<String>::into(msg).into()).await.is_err() {
                     // client disconnected
                     break;
                 }
             }
+            HandlerResult::Broadcast(msg) => {
+                debug!("broadcasting message: {:?}", msg);
+                if tx.send(msg).is_err() {
+                    // client disconnected
+                    break;
+                }
+            }
+        }
+    }
+
+    while let Ok(msg) = rx.recv().await {
+        debug!("sending message from broadcast: {:?}", msg);
+        if ws.send(Into::<String>::into(msg).into()).await.is_err() {
+            // client disconnected
+            break;
         }
     }
 
@@ -79,7 +110,7 @@ async fn handle_message(
     use HandlerResult::*;
 
     match msg {
-        ClientMsg::Authenticate { token } => {
+        ClientMsg::AuthenticateToken(token) => {
             let database = state.database.lock().await;
             let Ok(session_db) = auth::verify_session(token, database) else {
 				// Client sent invalid token
@@ -90,7 +121,35 @@ async fn handle_message(
 
             // Client sent valid token
             // Respond with success
-            return Reply(ServerMsg::Authenticate { success: true });
+            Reply(ServerMsg::Authenticate { success: true })
+        }
+        ClientMsg::Authenticate(user) => {
+            let database = state.database.lock().await;
+
+            // Get correct password hash
+            let user_db = match database.get_user_by_name(&user.name) {
+                Ok(Some(user)) => user,
+                Ok(None) => {
+                    // User doesn't exist
+                    return Reply(ServerMsg::Authenticate { success: false });
+                }
+                Err(err) => {
+                    error!("Failed to get user from database: {}", err);
+                    return Reply(ServerMsg::Error);
+                }
+            };
+
+            // Check credentials
+            let success = auth::hash::check_passwords(user.password, user_db.password);
+
+            // set session
+            *session = Some(Session {
+                id: todo!(),
+                token: todo!(),
+                user_id: todo!(),
+            });
+
+            Reply(ServerMsg::Authenticate { success })
         }
         ClientMsg::Pong => Continue,
         ClientMsg::Message(message) => {
@@ -100,10 +159,16 @@ async fn handle_message(
                 .next_id()
                 .expect("Failed to generate snowflake.");
 
+            // Get author from session
+            if session.is_none() {
+                return Reply(ServerMsg::Error);
+            }
+            let author = session.clone().unwrap().user_id;
+
             // Create a Message
             let message = Message {
                 id,
-                author: message.author,
+                author,
                 parent: message.parent,
                 content: message.content,
             };
@@ -111,10 +176,10 @@ async fn handle_message(
             // Add to database
             let database = state.database.lock().await;
             match database.add_message(&message) {
-                Ok(()) => Reply(ServerMsg::Message(message)),
+                Ok(()) => Broadcast(ServerMsg::NewMessage(message)),
                 Err(err) => {
                     error!("Failed to add message to database: {:?}", err);
-                    todo!("Reply with error")
+                    return Reply(ServerMsg::Error);
                 }
             }
         }
@@ -124,7 +189,7 @@ async fn handle_message(
                 Ok(messages) => Reply(ServerMsg::Messages(messages)),
                 Err(err) => {
                     error!("Failed to get messages from database: {:?}", err);
-                    return Reply(ServerMsg::Error);
+                    Reply(ServerMsg::Error)
                 }
             }
         }
@@ -134,31 +199,37 @@ async fn handle_message(
                 Ok(messages) => Reply(ServerMsg::Messages(messages)),
                 Err(err) => {
                     error!("Failed to get messages from database: {:?}", err);
-                    return Reply(ServerMsg::Error);
+                    Reply(ServerMsg::Error)
                 }
             }
         }
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 /// Basically just a [`Message`](crate::model::Message) without an id.
 pub struct SendMessage {
-    pub author: crate::model::user::Id,
+    // pub author: crate::model::user::Id,
     pub parent: Option<crate::model::message::Id>,
     pub content: String,
+}
+
+#[derive(Clone, Debug, serde::Deserialize)]
+pub struct PartialUser {
+    pub name: String,
+    pub password: String,
 }
 
 enum HandlerResult {
     Continue,
     Reply(ServerMsg),
+    Broadcast(ServerMsg),
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 enum ClientMsg {
-    Authenticate {
-        token: u64,
-    },
+    AuthenticateToken(u64),
+    Authenticate(PartialUser),
     Pong,
     Message(SendMessage),
     LoadMessages {
@@ -171,10 +242,10 @@ enum ClientMsg {
     },
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Clone, Debug, serde::Serialize)]
 enum ServerMsg {
     Authenticate { success: bool },
-    Message(Message),
+    NewMessage(Message),
     Error,
     Messages(Vec<Message>),
 }
