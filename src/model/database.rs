@@ -1,5 +1,5 @@
 use super::{Message, Session, Snowflake, User};
-use log::debug;
+use log::{debug, trace};
 use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult, Row};
 
 type Result<T> = SqlResult<Option<T>>;
@@ -18,6 +18,9 @@ impl Database {
 
     fn init_db() -> SqlResult<Connection> {
         let conn = Connection::open("./db.sqlite3")?;
+
+        trace!("Opened database connection.");
+        trace!("Initializing database...");
 
         conn.execute(
             "CREATE TABLE IF NOT EXISTS users (
@@ -49,6 +52,8 @@ impl Database {
             )",
             (),
         )?;
+
+        trace!("Finished initialized database");
 
         Ok(conn)
     }
