@@ -44,7 +44,7 @@ pub async fn login(
     }
 
     // Generate token
-    let id = state.snowcloud.next_id().unwrap();
+    let id = state.next_snowflake();
     let token = auth::token::generate_token();
     let session = Session::new(id, token, user_db.id);
 
