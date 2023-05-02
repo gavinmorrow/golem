@@ -61,11 +61,21 @@ async fn handle_ws(mut ws: WebSocket, state: Arc<AppState>, tx: broadcast::Sende
             break;
         };
 
+        if let ws::Message::Close(_) = msg {
+            // client closing
+            trace!("Client sent close frame");
+            break;
+        }
+
+        if let ws::Message::Pong(_) = msg {
+            trace!("Client sent pong");
+        }
+
         let msg = match ClientMsg::build(msg.clone()) {
             Ok(msg) => msg,
             Err(err) => {
                 // client sent invalid message, ignore
-                debug!("client sent invalid message: {:?}\nError: {}", msg, err);
+                debug!("client sent invalid message: {:?}\nError: {:?}", msg, err);
                 continue;
             }
         };
@@ -176,9 +186,19 @@ async fn handle_message(
                 }
             }
         }
+        ClientMsg::LoadAllMessages => {
+            let database = state.database.lock().await;
+            match database.get_messages() {
+                Ok(messages) => Reply(ServerMsg::Messages(messages)),
+                Err(err) => {
+                    error!("Failed to get messages from database: {:?}", err);
+                    Reply(ServerMsg::Error)
+                }
+            }
+        }
         ClientMsg::LoadMessages { before, amount } => {
             let database = state.database.lock().await;
-            match database.get_messages(before, amount) {
+            match database.get_some_messages(before, amount) {
                 Ok(messages) => Reply(ServerMsg::Messages(messages)),
                 Err(err) => {
                     error!("Failed to get messages from database: {:?}", err);
@@ -225,6 +245,7 @@ enum ClientMsg {
     Authenticate(PartialUser),
     Pong,
     Message(SendMessage),
+    LoadAllMessages,
     LoadMessages {
         before: Option<crate::model::message::Id>,
         amount: u8,
@@ -252,12 +273,20 @@ impl Into<String> for ServerMsg {
 impl ClientMsg {
     /// Build a [`ClientMsg`] from a [`ws::Message`].
     /// The message must be the [`Text`](ws::Message::Text) variant.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the message is not the [`Text`](ws::Message::Text) variant.
-    fn build(msg: ws::Message) -> Result<ClientMsg, serde_json::Error> {
-        let Text(msg) = msg else { panic!("Invalid message type") };
-        serde_json::from_str(&msg)
+    fn build(msg: ws::Message) -> Result<ClientMsg, ClientMsgBuildError> {
+        let Text(msg) = msg else {
+            return Err(ClientMsgBuildError::MsgType);
+        };
+
+        match serde_json::from_str(&msg) {
+            Ok(msg) => Ok(msg),
+            Err(err) => Err(ClientMsgBuildError::Serde(err)),
+        }
     }
+}
+
+#[derive(Debug)]
+enum ClientMsgBuildError {
+    MsgType,
+    Serde(serde_json::error::Error),
 }
