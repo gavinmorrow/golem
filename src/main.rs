@@ -5,6 +5,7 @@ use axum::{
 };
 use log::info;
 use model::AppState;
+use tower_http::services::ServeDir;
 
 mod auth;
 mod logger;
@@ -37,6 +38,7 @@ async fn main() {
         .route("/api/register", post(routes::register::register))
         .route("/api/snowflake", get(routes::snowflake))
         .route("/api/snapshot", get(routes::messages::get_snapshot))
+        .nest_service("/", ServeDir::new("public"))
         .with_state(state.into());
 
     axum::Server::bind(&ROOT_PATH.parse().unwrap())
