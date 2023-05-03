@@ -10,6 +10,7 @@ use axum::{
     Router,
 };
 use axum_macros::debug_handler;
+use futures::{SinkExt, StreamExt};
 use log::{debug, error, trace};
 use tokio::sync::broadcast;
 
@@ -18,13 +19,31 @@ use crate::{
     model::{AppState, Message, Session},
 };
 
+use self::broadcast_msg::BroadcastMsg;
+
 struct WsState {
     appstate: Arc<AppState>,
-    tx: broadcast::Sender<ServerMsg>,
+    tx: Sender,
 }
 
+mod broadcast_msg {
+    #[derive(Clone)]
+    pub struct BroadcastMsg<T> {
+        pub target: Target,
+        pub content: T,
+    }
+
+    #[derive(Clone)]
+    pub enum Target {
+        All,
+        One(i64),
+    }
+}
+
+type Sender = broadcast::Sender<BroadcastMsg<ServerMsg>>;
+
 pub fn router(state: Arc<AppState>) -> Router<Arc<AppState>> {
-    let (tx, _) = broadcast::channel(10);
+    let (tx, _) = broadcast::channel(100);
     let state = Arc::new(WsState {
         appstate: state,
         tx,
@@ -49,65 +68,107 @@ async fn handler(ws: WebSocketUpgrade, State(state): State<Arc<WsState>>) -> Res
 // - Use `message` when you're referring to a
 //   message in the database/chat
 
-async fn handle_ws(mut ws: WebSocket, state: Arc<AppState>, tx: broadcast::Sender<ServerMsg>) {
+async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
     trace!("ws connection opened");
 
     let mut session: Option<Session> = None;
+    let id = state.next_snowflake().id();
+
+    // Split ws to send and receive at the same time
+    let (mut sender, mut receiver) = ws.split();
     let mut rx = tx.subscribe();
 
-    while let Some(msg) = ws.recv().await {
-        let Ok(msg) = msg else {
-            // client disconnected
-            break;
-        };
-
-        if let ws::Message::Close(_) = msg {
-            // client closing
-            trace!("Client sent close frame");
-            break;
-        }
-
-        if let ws::Message::Pong(_) = msg {
-            trace!("Client sent pong");
-        }
-
-        let msg = match ClientMsg::build(msg.clone()) {
-            Ok(msg) => msg,
-            Err(err) => {
-                // client sent invalid message, ignore
-                debug!("client sent invalid message: {:?}\nError: {:?}", msg, err);
-                continue;
-            }
-        };
-
-        debug!("received message: {:?}", msg);
-
-        match handle_message(msg, &mut session, state.clone()).await {
-            HandlerResult::Continue => continue,
-            HandlerResult::Reply(msg) => {
-                debug!("sending message: {:?}", msg);
-                if ws.send(Into::<String>::into(msg).into()).await.is_err() {
-                    // client disconnected
-                    break;
+    // Send messages
+    let mut send_task = tokio::spawn(async move {
+        while let Ok(msg) = rx.recv().await {
+            // Check the target
+            // If it's all or the current id, send it
+            // Otherwise ignore it
+            match msg.target {
+                broadcast_msg::Target::All => {
+                    debug!("sending message from broadcast: {:?}", msg.content)
+                }
+                broadcast_msg::Target::One(target_id) => {
+                    if id == target_id {
+                        // Yup! A special message just for us!
+                        debug!("sending message to ws {}: {:?}", id, msg.content);
+                    } else {
+                        // Not for us
+                        continue;
+                    }
                 }
             }
-            HandlerResult::Broadcast(msg) => {
-                debug!("broadcasting message: {:?}", msg);
-                if tx.send(msg).is_err() {
-                    // client disconnected
-                    break;
+            if sender
+                .send(Into::<String>::into(msg.content).into())
+                .await
+                .is_err()
+            {
+                // client disconnected
+                break;
+            }
+        }
+    });
+
+    let tx = tx.clone();
+
+    let mut recv_task = tokio::spawn(async move {
+        while let Some(Ok(msg)) = receiver.next().await {
+            if let ws::Message::Close(_) = msg {
+                // client closing
+                trace!("Client sent close frame");
+                break;
+            }
+
+            if let ws::Message::Pong(_) = msg {
+                trace!("Client sent pong");
+            }
+
+            let msg = match ClientMsg::build(msg.clone()) {
+                Ok(msg) => msg,
+                Err(err) => {
+                    // client sent invalid message, ignore
+                    debug!("client sent invalid message: {:?}\nError: {:?}", msg, err);
+                    continue;
+                }
+            };
+
+            debug!("received message: {:?}", msg);
+
+            match handle_message(msg, &mut session, state.clone()).await {
+                HandlerResult::Continue => continue,
+                HandlerResult::Reply(msg) => {
+                    debug!("sending message: {:?}", msg);
+                    // if sender.send(Into::<String>::into(msg).into()).await.is_err() {
+                    //     // client disconnected
+                    //     break;
+                    // }
+                    let msg = BroadcastMsg {
+                        target: broadcast_msg::Target::One(id),
+                        content: msg,
+                    };
+                    if tx.send(msg).is_err() {
+                        break;
+                    }
+                }
+                HandlerResult::Broadcast(msg) => {
+                    debug!("broadcasting message: {:?}", msg);
+                    let msg = BroadcastMsg {
+                        target: broadcast_msg::Target::All,
+                        content: msg,
+                    };
+                    if tx.send(msg).is_err() {
+                        break;
+                    }
                 }
             }
         }
-    }
+    });
 
-    while let Ok(msg) = rx.recv().await {
-        debug!("sending message from broadcast: {:?}", msg);
-        if ws.send(Into::<String>::into(msg).into()).await.is_err() {
-            // client disconnected
-            break;
-        }
-    }
+    // If any one of the tasks run to completion, we abort the other.
+    tokio::select! {
+        _ = (&mut send_task) => recv_task.abort(),
+        _ = (&mut recv_task) => send_task.abort(),
+    };
 
     trace!("ws connection closed");
 }
