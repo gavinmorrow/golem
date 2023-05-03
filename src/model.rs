@@ -12,7 +12,7 @@ pub use message::Message;
 pub use session::Session;
 pub use user::User;
 
-type Snowflake = snowcloud::Snowflake<43, 8, 12>;
+pub type Snowflake = snowcloud::Snowflake<43, 8, 12>;
 
 #[derive(Clone)]
 pub struct AppState {
