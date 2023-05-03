@@ -137,11 +137,7 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
             match handle_message(msg, &mut session, state.clone()).await {
                 HandlerResult::Continue => continue,
                 HandlerResult::Reply(msg) => {
-                    debug!("sending message: {:?}", msg);
-                    // if sender.send(Into::<String>::into(msg).into()).await.is_err() {
-                    //     // client disconnected
-                    //     break;
-                    // }
+                    debug!("sending message to {}", id);
                     let msg = BroadcastMsg {
                         target: broadcast_msg::Target::One(id),
                         content: msg,
@@ -151,7 +147,7 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
                     }
                 }
                 HandlerResult::Broadcast(msg) => {
-                    debug!("broadcasting message: {:?}", msg);
+                    trace!("broadcasting message");
                     let msg = BroadcastMsg {
                         target: broadcast_msg::Target::All,
                         content: msg,
