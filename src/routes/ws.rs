@@ -5,6 +5,7 @@ use axum::{
         ws::{self, Message::Text, WebSocket},
         State, WebSocketUpgrade,
     },
+    headers::Server,
     response::Response,
     routing::get,
     Router,
@@ -19,12 +20,9 @@ use crate::{
     model::{AppState, Message, Session},
 };
 
-use self::broadcast_msg::BroadcastMsg;
+use self::{broadcast_msg::BroadcastMsg, state::WsState};
 
-struct WsState {
-    appstate: Arc<AppState>,
-    tx: Sender,
-}
+mod state;
 
 mod broadcast_msg {
     #[derive(Clone)]
