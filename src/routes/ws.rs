@@ -21,6 +21,7 @@ use crate::{
 
 use self::{broadcast_msg::BroadcastMsg, state::WsState};
 
+mod recv;
 mod state;
 
 mod broadcast_msg {
@@ -81,7 +82,7 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
 
     let tx = tx.clone();
 
-    let mut recv_task = tokio::spawn(recv_ws(receiver, session, state, id, tx));
+    let mut recv_task = tokio::spawn(recv::recv_ws(receiver, session, state, id, tx));
 
     // If any one of the tasks run to completion, we abort the other.
     tokio::select! {
@@ -90,61 +91,6 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
     };
 
     trace!("ws connection closed");
-}
-
-async fn recv_ws(
-    mut receiver: futures::stream::SplitStream<WebSocket>,
-    mut session: Option<Session>,
-    state: Arc<AppState>,
-    id: i64,
-    tx: broadcast::Sender<Broadcast>,
-) {
-    while let Some(Ok(msg)) = receiver.next().await {
-        if let ws::Message::Close(_) = msg {
-            // client closing
-            trace!("Client sent close frame");
-            break;
-        }
-
-        if let ws::Message::Pong(_) = msg {
-            trace!("Client sent pong");
-        }
-
-        let msg = match ClientMsg::build(msg.clone()) {
-            Ok(msg) => msg,
-            Err(err) => {
-                // client sent invalid message, ignore
-                debug!("client sent invalid message: {:?}\nError: {:?}", msg, err);
-                continue;
-            }
-        };
-
-        debug!("received message: {:?}", msg);
-
-        match handle_message(msg, &mut session, state.clone()).await {
-            HandlerResult::Continue => continue,
-            HandlerResult::Reply(msg) => {
-                debug!("sending message to {}", id);
-                let msg = BroadcastMsg {
-                    target: broadcast_msg::Target::One(id),
-                    content: msg,
-                };
-                if tx.send(msg).is_err() {
-                    break;
-                }
-            }
-            HandlerResult::Broadcast(msg) => {
-                trace!("broadcasting message");
-                let msg = BroadcastMsg {
-                    target: broadcast_msg::Target::All,
-                    content: msg,
-                };
-                if tx.send(msg).is_err() {
-                    break;
-                }
-            }
-        }
-    }
 }
 
 async fn broadcast_handler(
@@ -181,113 +127,6 @@ async fn broadcast_handler(
     }
 }
 
-async fn handle_message(
-    msg: ClientMsg,
-    session: &mut Option<Session>,
-    state: Arc<AppState>,
-) -> HandlerResult {
-    use HandlerResult::*;
-
-    match msg {
-        ClientMsg::AuthenticateToken(token) => {
-            let database = state.database.lock().await;
-            let Ok(session_db) = auth::verify_session(token, database) else {
-				// Client sent invalid token
-				return Reply(ServerMsg::Authenticate { success: false });
-			};
-
-            *session = Some(session_db);
-
-            // Client sent valid token
-            // Respond with success
-            Reply(ServerMsg::Authenticate { success: true })
-        }
-        ClientMsg::Authenticate(user) => {
-            let database = state.database.lock().await;
-
-            // Get correct password hash
-            let user_db = match database.get_user_by_name(&user.name) {
-                Ok(Some(user)) => user,
-                Ok(None) => {
-                    // User doesn't exist
-                    return Reply(ServerMsg::Authenticate { success: false });
-                }
-                Err(err) => {
-                    error!("Failed to get user from database: {}", err);
-                    return Reply(ServerMsg::Error);
-                }
-            };
-
-            // Check credentials
-            let success = auth::hash::check_passwords(user.password, user_db.password);
-
-            // set session
-            *session = Some(Session::generate(state.next_snowflake(), user_db.id));
-
-            Reply(ServerMsg::Authenticate { success })
-        }
-        ClientMsg::Pong => Continue,
-        ClientMsg::Message(message) => {
-            // Generate an id
-            let id = state.next_snowflake();
-
-            // Get author from session
-            if session.is_none() {
-                return Reply(ServerMsg::Error);
-            }
-            let author = session.clone().unwrap().user_id;
-
-            // Create a Message
-            let message = Message {
-                id,
-                author,
-                parent: message.parent,
-                content: message.content,
-            };
-
-            // Add to database
-            let database = state.database.lock().await;
-            match database.add_message(&message) {
-                Ok(()) => Broadcast(ServerMsg::NewMessage(message)),
-                Err(err) => {
-                    error!("Failed to add message to database: {:?}", err);
-                    return Reply(ServerMsg::Error);
-                }
-            }
-        }
-        ClientMsg::LoadAllMessages => {
-            let database = state.database.lock().await;
-            match database.get_messages() {
-                Ok(messages) => Reply(ServerMsg::Messages(messages)),
-                Err(err) => {
-                    error!("Failed to get messages from database: {:?}", err);
-                    Reply(ServerMsg::Error)
-                }
-            }
-        }
-        ClientMsg::LoadMessages { before, amount } => {
-            let database = state.database.lock().await;
-            match database.get_some_messages(before, amount) {
-                Ok(messages) => Reply(ServerMsg::Messages(messages)),
-                Err(err) => {
-                    error!("Failed to get messages from database: {:?}", err);
-                    Reply(ServerMsg::Error)
-                }
-            }
-        }
-        ClientMsg::LoadChildren { parent, depth } => {
-            let database = state.database.lock().await;
-            match database.get_children_of(Some(&parent), depth) {
-                Ok(messages) => Reply(ServerMsg::Messages(messages)),
-                Err(err) => {
-                    error!("Failed to get messages from database: {:?}", err);
-                    Reply(ServerMsg::Error)
-                }
-            }
-        }
-    }
-}
-
 #[derive(Clone, Debug, serde::Deserialize)]
 /// Basically just a [`Message`](crate::model::Message) without an id.
 pub struct SendMessage {
@@ -300,12 +139,6 @@ pub struct SendMessage {
 pub struct PartialUser {
     pub name: String,
     pub password: String,
-}
-
-enum HandlerResult {
-    Continue,
-    Reply(ServerMsg),
-    Broadcast(ServerMsg),
 }
 
 #[derive(Clone, Debug, serde::Deserialize)]
