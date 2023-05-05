@@ -38,7 +38,8 @@ mod broadcast_msg {
     }
 }
 
-type Sender = broadcast::Sender<BroadcastMsg<ServerMsg>>;
+type Broadcast = BroadcastMsg<ServerMsg>;
+type Sender = broadcast::Sender<Broadcast>;
 
 pub fn router(state: Arc<AppState>) -> Router<Arc<AppState>> {
     let (tx, _) = broadcast::channel(100);
