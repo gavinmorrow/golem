@@ -70,11 +70,11 @@ async fn handler(ws: WebSocketUpgrade, State(state): State<Arc<WsState>>) -> Res
 async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
     trace!("ws connection opened");
 
-    let mut session: Option<Session> = None;
+    let session: Option<Session> = None;
     let id = state.next_snowflake().id();
 
     // Split ws to send and receive at the same time
-    let (sender, mut receiver) = ws.split();
+    let (sender, receiver) = ws.split();
     let rx = tx.subscribe();
 
     // Send messages
@@ -82,54 +82,7 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
 
     let tx = tx.clone();
 
-    let mut recv_task = tokio::spawn(async move {
-        while let Some(Ok(msg)) = receiver.next().await {
-            if let ws::Message::Close(_) = msg {
-                // client closing
-                trace!("Client sent close frame");
-                break;
-            }
-
-            if let ws::Message::Pong(_) = msg {
-                trace!("Client sent pong");
-            }
-
-            let msg = match ClientMsg::build(msg.clone()) {
-                Ok(msg) => msg,
-                Err(err) => {
-                    // client sent invalid message, ignore
-                    debug!("client sent invalid message: {:?}\nError: {:?}", msg, err);
-                    continue;
-                }
-            };
-
-            debug!("received message: {:?}", msg);
-
-            match handle_message(msg, &mut session, state.clone()).await {
-                HandlerResult::Continue => continue,
-                HandlerResult::Reply(msg) => {
-                    debug!("sending message to {}", id);
-                    let msg = BroadcastMsg {
-                        target: broadcast_msg::Target::One(id),
-                        content: msg,
-                    };
-                    if tx.send(msg).is_err() {
-                        break;
-                    }
-                }
-                HandlerResult::Broadcast(msg) => {
-                    trace!("broadcasting message");
-                    let msg = BroadcastMsg {
-                        target: broadcast_msg::Target::All,
-                        content: msg,
-                    };
-                    if tx.send(msg).is_err() {
-                        break;
-                    }
-                }
-            }
-        }
-    });
+    let mut recv_task = tokio::spawn(recv_ws(receiver, session, state, id, tx));
 
     // If any one of the tasks run to completion, we abort the other.
     tokio::select! {
@@ -138,6 +91,61 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
     };
 
     trace!("ws connection closed");
+}
+
+async fn recv_ws(
+    mut receiver: futures::stream::SplitStream<WebSocket>,
+    mut session: Option<Session>,
+    state: Arc<AppState>,
+    id: i64,
+    tx: broadcast::Sender<Broadcast>,
+) {
+    while let Some(Ok(msg)) = receiver.next().await {
+        if let ws::Message::Close(_) = msg {
+            // client closing
+            trace!("Client sent close frame");
+            break;
+        }
+
+        if let ws::Message::Pong(_) = msg {
+            trace!("Client sent pong");
+        }
+
+        let msg = match ClientMsg::build(msg.clone()) {
+            Ok(msg) => msg,
+            Err(err) => {
+                // client sent invalid message, ignore
+                debug!("client sent invalid message: {:?}\nError: {:?}", msg, err);
+                continue;
+            }
+        };
+
+        debug!("received message: {:?}", msg);
+
+        match handle_message(msg, &mut session, state.clone()).await {
+            HandlerResult::Continue => continue,
+            HandlerResult::Reply(msg) => {
+                debug!("sending message to {}", id);
+                let msg = BroadcastMsg {
+                    target: broadcast_msg::Target::One(id),
+                    content: msg,
+                };
+                if tx.send(msg).is_err() {
+                    break;
+                }
+            }
+            HandlerResult::Broadcast(msg) => {
+                trace!("broadcasting message");
+                let msg = BroadcastMsg {
+                    target: broadcast_msg::Target::All,
+                    content: msg,
+                };
+                if tx.send(msg).is_err() {
+                    break;
+                }
+            }
+        }
+    }
 }
 
 async fn broadcast_handler(
