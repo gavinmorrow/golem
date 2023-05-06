@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{
-        ws::{self, Message::Text, WebSocket},
-        State, WebSocketUpgrade,
-    },
+    extract::{ws::WebSocket, State, WebSocketUpgrade},
     response::Response,
     routing::get,
     Router,
@@ -81,39 +78,8 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
     trace!("ws connection closed");
 }
 
-#[derive(Clone, Debug, serde::Deserialize)]
-/// Basically just a [`Message`](crate::model::Message) without an id.
-pub struct SendMessage {
-    // pub author: crate::model::user::Id,
-    pub parent: Option<crate::model::message::Id>,
-    pub content: String,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct PartialUser {
-    pub name: String,
-    pub password: String,
-}
-
-#[derive(Clone, Debug, serde::Deserialize)]
-enum ClientMsg {
-    AuthenticateToken(u64),
-    Authenticate(PartialUser),
-    Pong,
-    Message(SendMessage),
-    LoadAllMessages,
-    LoadMessages {
-        before: Option<crate::model::message::Id>,
-        amount: u8,
-    },
-    LoadChildren {
-        parent: crate::model::message::Id,
-        depth: u8,
-    },
-}
-
 #[derive(Clone, Debug, serde::Serialize)]
-enum ServerMsg {
+pub enum ServerMsg {
     Authenticate { success: bool },
     NewMessage(Message),
     Error,
@@ -124,25 +90,4 @@ impl Into<String> for ServerMsg {
     fn into(self) -> String {
         serde_json::to_string(&self).unwrap()
     }
-}
-
-impl ClientMsg {
-    /// Build a [`ClientMsg`] from a [`ws::Message`].
-    /// The message must be the [`Text`](ws::Message::Text) variant.
-    fn build(msg: ws::Message) -> Result<ClientMsg, ClientMsgBuildError> {
-        let Text(msg) = msg else {
-            return Err(ClientMsgBuildError::MsgType);
-        };
-
-        match serde_json::from_str(&msg) {
-            Ok(msg) => Ok(msg),
-            Err(err) => Err(ClientMsgBuildError::Serde(err)),
-        }
-    }
-}
-
-#[derive(Debug)]
-enum ClientMsgBuildError {
-    MsgType,
-    Serde(serde_json::error::Error),
 }

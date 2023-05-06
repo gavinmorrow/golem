@@ -9,12 +9,14 @@ use crate::model::{AppState, Session};
 
 use super::{
     broadcast_msg::{self, BroadcastMsg},
-    Broadcast, ClientMsg,
+    Broadcast,
 };
 
-use msg::HandlerResult;
+use msg::ClientMsg;
+use msg_handler::HandlerResult;
 
 mod msg;
+mod msg_handler;
 
 pub(super) async fn recv_ws(
     mut receiver: futures::stream::SplitStream<WebSocket>,
@@ -45,7 +47,7 @@ pub(super) async fn recv_ws(
 
         debug!("received message: {:?}", msg);
 
-        match msg::handle_message(msg, &mut session, state.clone()).await {
+        match msg_handler::handle_message(msg, &mut session, state.clone()).await {
             HandlerResult::Continue => continue,
             HandlerResult::Reply(msg) => {
                 debug!("sending message to {}", id);
