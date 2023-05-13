@@ -4,7 +4,7 @@ use axum::extract::ws::{self, Message::Text};
 /// Basically just a [`Message`](crate::model::Message) without an id.
 pub struct SendMessage {
     // pub author: crate::model::user::Id,
-    pub parent: Option<crate::model::message::Id>,
+    pub parent: crate::model::message::Id,
     pub content: String,
 }
 
