@@ -1,9 +1,12 @@
 use axum::extract::ws::{self, Message::Text};
+use serde_with::DisplayFromStr;
 
+#[serde_with::serde_as]
 #[derive(Clone, Debug, serde::Deserialize)]
 /// Basically just a [`Message`](crate::model::Message) without an id.
 pub struct SendMessage {
     // pub author: crate::model::user::Id,
+    #[serde_as(as = "DisplayFromStr")]
     pub parent: crate::model::message::Id,
     pub content: String,
 }

@@ -183,12 +183,20 @@ impl Database {
     }
 
     pub fn add_message(&self, message: &Message) -> SqlResult<()> {
+        // TODO: make a proper room system
+        // For now, an id of 0 means it is in the main room
+        // As rooms aren't implemented yet, we just set the parent to None
+        let parent = match message.parent.id() {
+            0 => None,
+            id => Some(id),
+        };
+
         self.conn.execute(
             "INSERT INTO messages (id, author, parent, content) VALUES (?1, ?2, ?3, ?4)",
             (
                 message.id.id(),
                 message.author.id(),
-                message.parent.id(),
+                parent,
                 <String as AsRef<str>>::as_ref(&message.content),
             ),
         )?;
@@ -196,10 +204,16 @@ impl Database {
     }
 
     fn map_message(&self, row: &Row) -> SqlResult<Message> {
+        // See `add_message` for why we do this
+        let parent = match self.get_snowflake_column_optional(row, 2) {
+            Some(id) => id,
+            None => Snowflake::try_from(0).expect("0 (hardcoded) is a valid snowflake"),
+        };
+
         Ok(Message {
             id: self.get_snowflake_column(row, 0),
             author: self.get_snowflake_column(row, 1),
-            parent: self.get_snowflake_column(row, 2),
+            parent,
             content: self.get_column(row, 3),
         })
     }

@@ -81,11 +81,7 @@ function handleNewMessage(message) {
 	message = message.NewMessage;
 
 	const chat = document.getElementById("chat");
-
-	const msg = document.createElement("div");
-	msg.className = "message";
-	msg.innerHTML = `<span class="message-id">${message.id}</span> <span class="message-author">[${message.author}]</span>: ${message.content}`;
-	chat.appendChild(msg);
+	makeMessageElem(message).insert();
 }
 
 function handleMessages(message) {
@@ -96,12 +92,13 @@ function handleMessages(message) {
 	// Add to DOM
 	const chat = document.getElementById("chat");
 
-	for (const message of messages) {
-		const msg = document.createElement("div");
-		msg.className = "message";
-		msg.innerHTML = `<span class="message-id">${message.id}</span> <span class="message-author">[${message.author}]</span>: ${message.content}`;
-		chat.prepend(msg);
+	for (const message of messages.reverse()) {
+		makeMessageElem(message).insert();
 	}
+}
+
+function makeMessageElem(message) {
+	return new ChatMessage(message);
 }
 
 function handleError(message) {
@@ -138,3 +135,86 @@ document.getElementById("msg-form").addEventListener("submit", event => {
 	console.log(msg);
 	ws.send(msg);
 });
+
+class ChatMessage extends HTMLElement {
+	static messages = [];
+
+	/**
+	 * @type {Object}
+	 * @property {string} id
+	 * @property {string} author
+	 * @property {string} parent
+	 * @property {string} content
+	 */
+	message;
+
+	children = [];
+
+	constructor(message) {
+		super();
+
+		this.message = message;
+
+		// Create shadow DOM
+		const shadow = this.attachShadow({ mode: "open" });
+
+		const author = document.createElement("address");
+		author.textContent = message.author;
+		author.setAttribute("rel", "author");
+
+		const content = document.createElement("span");
+		content.textContent = message.content;
+
+		const style = document.createElement("style");
+		style.textContent = `
+		address, span {
+			margin-left: 0;
+		}
+
+		chat-message {
+			margin-left: 1em;
+			display: block;
+		}
+		`;
+
+		shadow.appendChild(author);
+		shadow.appendChild(content);
+		shadow.appendChild(style);
+
+		ChatMessage.messages.push(this);
+	}
+
+	connectedCallback() {
+		this.setAttribute("class", "message");
+		this.setAttribute("id", `msg-${this.message.id}`);
+		this.setAttribute("data-author", this.message.author);
+		this.setAttribute("data-parent", this.message.parent);
+		this.setAttribute("data-content", this.message.content);
+	}
+
+	addChild(child) {
+		// Add to DOM
+		this.shadowRoot.appendChild(child);
+
+		this.children.push(child);
+	}
+
+	insert(root = document.getElementById("chat")) {
+		if (this.message.parent === "0") {
+			root.appendChild(this);
+			return;
+		}
+
+		const parent = ChatMessage.messages.filter(
+			msg => msg.message.id === this.message.parent
+		)[0];
+
+		if (parent == null) {
+			throw new Error(`Parent message not found: ${this.message.parent}`);
+		}
+
+		parent.addChild(this);
+	}
+}
+
+customElements.define("chat-message", ChatMessage);
