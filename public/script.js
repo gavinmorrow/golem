@@ -84,7 +84,7 @@ function handleNewMessage(message) {
 
 	const msg = document.createElement("div");
 	msg.className = "message";
-	msg.innerHTML = `<span class="message-author">${message.author}</span>: ${message.content}`;
+	msg.innerHTML = `<span class="message-id">${message.id}</span> <span class="message-author">[${message.author}]</span>: ${message.content}`;
 	chat.appendChild(msg);
 }
 
@@ -99,7 +99,7 @@ function handleMessages(message) {
 	for (const message of messages) {
 		const msg = document.createElement("div");
 		msg.className = "message";
-		msg.innerHTML = `<span class="message-id">${message.id} <span class="message-author">[${message.author}]</span>: ${message.content}`;
+		msg.innerHTML = `<span class="message-id">${message.id}</span> <span class="message-author">[${message.author}]</span>: ${message.content}`;
 		chat.prepend(msg);
 	}
 }
@@ -130,7 +130,7 @@ document.getElementById("msg-form").addEventListener("submit", event => {
 
 	const msg = JSON.stringify({
 		Message: {
-			parent: parent.length <= 0 ? null : Number(parent),
+			parent: parent.length <= 0 ? null : parent,
 			content,
 		},
 	});
