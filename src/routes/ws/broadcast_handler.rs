@@ -16,12 +16,12 @@ pub(super) async fn broadcast_handler(
         // Otherwise ignore it
         match msg.target {
             broadcast_msg::Target::All => {
-                debug!("sending message from broadcast: {:?}", msg.content)
+                debug!("sending message from broadcast");
             }
             broadcast_msg::Target::One(target_id) => {
                 if id == target_id {
                     // Yup! A special message just for us!
-                    debug!("sending message to ws {}: {:?}", id, msg.content);
+                    debug!("sending message to ws {}", id);
                 } else {
                     // Not for us
                     continue;
