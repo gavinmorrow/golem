@@ -6,7 +6,7 @@ use log::{error, warn};
 
 use crate::{
     auth,
-    model::{AppState, User},
+    model::{AppState, Snowflake, User},
 };
 
 #[derive(Debug, serde::Deserialize)]
@@ -34,7 +34,7 @@ pub async fn register(
         };
     }
 
-    let snowflake = snowflake.unwrap();
+    let snowflake: Snowflake = snowflake.unwrap().into();
     let password = auth::hash::hash_password(user.password);
     let user = User {
         id: snowflake.clone(),

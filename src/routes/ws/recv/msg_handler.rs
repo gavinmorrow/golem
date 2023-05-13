@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use log::error;
 
+use crate::model::Snowflake;
 use crate::{auth, model::Message};
 
 use super::super::{AppState, ServerMsg, Session};
@@ -106,7 +107,7 @@ async fn load_all_messages(state: &Arc<AppState>) -> HandlerResult {
 
 async fn load_messages(
     state: &Arc<AppState>,
-    before: Option<snowcloud::Snowflake<43, 8, 12>>,
+    before: Option<Snowflake>,
     amount: u8,
 ) -> HandlerResult {
     let database = state.database.lock().await;
@@ -119,11 +120,7 @@ async fn load_messages(
     }
 }
 
-async fn load_children(
-    state: Arc<AppState>,
-    parent: snowcloud::Snowflake<43, 8, 12>,
-    depth: u8,
-) -> HandlerResult {
+async fn load_children(state: Arc<AppState>, parent: Snowflake, depth: u8) -> HandlerResult {
     let database = state.database.lock().await;
     match database.get_children_of(Some(&parent), depth) {
         Ok(messages) => Reply(ServerMsg::Messages(messages)),
