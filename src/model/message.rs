@@ -8,8 +8,10 @@ pub type Id = Snowflake;
 pub struct Message {
     #[serde_as(as = "DisplayFromStr")]
     pub id: Id,
+    #[serde_as(as = "DisplayFromStr")]
     pub author: user::Id,
-    pub parent: Option<Id>,
+    #[serde_as(as = "DisplayFromStr")]
+    pub parent: Id,
     pub content: String,
 }
 
