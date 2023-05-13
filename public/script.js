@@ -13,6 +13,16 @@ ws.addEventListener("open", event => {
 
 	// Load messages
 	getMessages(ws);
+
+	// Authenticate
+	ws.send(
+		JSON.stringify({
+			Authenticate: {
+				name: "Gavin",
+				password: "123456",
+			},
+		})
+	);
 });
 
 ws.addEventListener("error", event => {
@@ -54,6 +64,12 @@ function handleMessage(message) {
 function handleAuthenticate(message) {
 	if (message.Authenticate.success) {
 		console.log("Successfully authenticated!");
+
+		// Hide login form
+		document.getElementById("login").outerHTML = "<p>Logged in!</p>";
+
+		// Show send message form
+		document.getElementById("msg-form").style.display = "block";
 	} else {
 		console.error("Failed to authenticate:", message.Authenticate.error);
 	}
@@ -83,7 +99,7 @@ function handleMessages(message) {
 	for (const message of messages) {
 		const msg = document.createElement("div");
 		msg.className = "message";
-		msg.innerHTML = `<span class="message-author">${message.author}</span>: ${message.content}`;
+		msg.innerHTML = `<span class="message-id">${message.id} <span class="message-author">[${message.author}]</span>: ${message.content}`;
 		chat.prepend(msg);
 	}
 }
@@ -110,10 +126,11 @@ document.getElementById("login").addEventListener("submit", event => {
 document.getElementById("msg-form").addEventListener("submit", event => {
 	event.preventDefault();
 	const content = document.getElementById("msg-input").value;
+	const parent = document.getElementById("msg-input-parent").value;
 
 	const msg = JSON.stringify({
 		Message: {
-			parent: null,
+			parent: parent.length <= 0 ? null : Number(parent),
 			content,
 		},
 	});
