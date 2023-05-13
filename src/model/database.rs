@@ -188,7 +188,7 @@ impl Database {
             (
                 message.id.id(),
                 message.author.id(),
-                message.parent.as_ref().map(|id| id.id()),
+                message.parent.id(),
                 <String as AsRef<str>>::as_ref(&message.content),
             ),
         )?;
@@ -199,7 +199,7 @@ impl Database {
         Ok(Message {
             id: self.get_snowflake_column(row, 0),
             author: self.get_snowflake_column(row, 1),
-            parent: self.get_snowflake_column_optional(row, 2),
+            parent: self.get_snowflake_column(row, 2),
             content: self.get_column(row, 3),
         })
     }
