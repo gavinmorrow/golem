@@ -120,14 +120,15 @@ document.getElementById("login").addEventListener("submit", event => {
 	);
 });
 
-document.getElementById("msg-form").addEventListener("submit", event => {
+const messageForm = document.getElementById("msg-form");
+messageForm.addEventListener("submit", event => {
 	event.preventDefault();
-	const content = document.getElementById("msg-input").value;
-	const parent = document.getElementById("msg-input-parent").value;
+	const content = messageForm.querySelector("#msg-input").value;
+	const parent = messageForm.querySelector("#msg-input-parent").value;
 
 	const msg = JSON.stringify({
 		Message: {
-			parent: parent.length <= 0 ? null : parent,
+			parent: parent.length <= 0 ? "0" : parent,
 			content,
 		},
 	});
@@ -179,13 +180,13 @@ class ChatMessage extends HTMLElement {
 			font-style: normal;
 		}
 
-		chat-message {
+		chat-message, form {
 			margin-left: 1em;
 			display: block;
 			position: relative;
 		}
 
-		chat-message::before {
+		chat-message::before, form::before {
 			content: "";
 			display: block;
 			width: 1px;
@@ -202,6 +203,19 @@ class ChatMessage extends HTMLElement {
 		shadow.appendChild(style);
 
 		ChatMessage.messages.push(this);
+
+		this.addEventListener("click", event => {
+			if (
+				(event.target === this || event.target === messageForm) &&
+				this.shadowRoot.contains(messageForm)
+			) {
+				event.stopPropagation();
+				return;
+			}
+
+			this.insertMessageInput();
+			event.stopPropagation();
+		});
 	}
 
 	connectedCallback() {
@@ -217,6 +231,11 @@ class ChatMessage extends HTMLElement {
 	addChild(child) {
 		// Add to DOM
 		this.shadowRoot.appendChild(child);
+
+		// If needed, move form down
+		if (this.shadowRoot.contains(messageForm)) {
+			this.shadowRoot.appendChild(messageForm);
+		}
 
 		this.children.push(child);
 	}
@@ -236,6 +255,11 @@ class ChatMessage extends HTMLElement {
 		}
 
 		parent.addChild(this);
+	}
+
+	insertMessageInput() {
+		this.shadowRoot.appendChild(messageForm);
+		messageForm.querySelector("#msg-input-parent").value = this.message.id;
 	}
 }
 
