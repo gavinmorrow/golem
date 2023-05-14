@@ -159,8 +159,10 @@ class ChatMessage extends HTMLElement {
 		const shadow = this.attachShadow({ mode: "open" });
 
 		const author = document.createElement("address");
-		author.textContent = message.author;
+		author.textContent = `[${message.author}]`;
 		author.setAttribute("rel", "author");
+
+		const space = document.createTextNode(" ");
 
 		const content = document.createElement("span");
 		content.textContent = message.content;
@@ -169,15 +171,33 @@ class ChatMessage extends HTMLElement {
 		style.textContent = `
 		address, span {
 			margin-left: 0;
+			display: inline-block;
+		}
+
+		address {
+			color: gray;
+			font-style: normal;
 		}
 
 		chat-message {
 			margin-left: 1em;
 			display: block;
+			position: relative;
+		}
+
+		chat-message::before {
+			content: "";
+			display: block;
+			width: 1px;
+			height: 100%;
+			background-color: gray;
+			left: -1em;
+			position: absolute;
 		}
 		`;
 
 		shadow.appendChild(author);
+		shadow.appendChild(space);
 		shadow.appendChild(content);
 		shadow.appendChild(style);
 
@@ -190,6 +210,8 @@ class ChatMessage extends HTMLElement {
 		this.setAttribute("data-author", this.message.author);
 		this.setAttribute("data-parent", this.message.parent);
 		this.setAttribute("data-content", this.message.content);
+		this.style.display = "block";
+		this.style.position = "relative";
 	}
 
 	addChild(child) {
