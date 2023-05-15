@@ -25,6 +25,8 @@ pub(super) async fn recv_ws(
     id: i64,
     tx: broadcast::Sender<Broadcast>,
 ) {
+    let mut dedup_ids = Vec::new();
+
     while let Some(Ok(msg)) = receiver.next().await {
         if let ws::Message::Close(_) = msg {
             // client closing
@@ -47,28 +49,37 @@ pub(super) async fn recv_ws(
 
         debug!("received message: {:?}", msg);
 
-        match msg_handler::handle_message(msg, &mut session, state.clone()).await {
-            HandlerResult::Continue => continue,
-            HandlerResult::Reply(msg) => {
-                debug!("sending message to {}", id);
-                let msg = BroadcastMsg {
-                    target: broadcast_msg::Target::One(id),
-                    content: msg,
-                };
-                if tx.send(msg).is_err() {
-                    break;
+        let msg_responses =
+            msg_handler::handle_message(msg, &mut session, &mut dedup_ids, state.clone()).await;
+
+        match msg_responses {
+            Some(msg_responses) => {
+                for response in msg_responses {
+                    match response {
+                        HandlerResult::Reply(msg) => {
+                            debug!("sending message to {}", id);
+                            let msg = BroadcastMsg {
+                                target: broadcast_msg::Target::One(id),
+                                content: msg,
+                            };
+                            if tx.send(msg).is_err() {
+                                break;
+                            }
+                        }
+                        HandlerResult::Broadcast(msg) => {
+                            trace!("broadcasting message");
+                            let msg = BroadcastMsg {
+                                target: broadcast_msg::Target::All,
+                                content: msg,
+                            };
+                            if tx.send(msg).is_err() {
+                                break;
+                            }
+                        }
+                    }
                 }
             }
-            HandlerResult::Broadcast(msg) => {
-                trace!("broadcasting message");
-                let msg = BroadcastMsg {
-                    target: broadcast_msg::Target::All,
-                    content: msg,
-                };
-                if tx.send(msg).is_err() {
-                    break;
-                }
-            }
+            None => continue,
         }
     }
 }

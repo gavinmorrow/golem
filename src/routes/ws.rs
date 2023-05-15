@@ -12,7 +12,7 @@ use log::trace;
 use tokio::sync::broadcast;
 
 use crate::{
-    model::{AppState, Message, Session},
+    model::{AppState, Message, Session, User},
     routes::ws::broadcast_handler::broadcast_handler,
 };
 
@@ -84,6 +84,9 @@ pub enum ServerMsg {
     NewMessage(Message),
     Error,
     Messages(Vec<Message>),
+    Duplicate(String),
+    Unauthenticated,
+    Join(User),
 }
 
 impl Into<String> for ServerMsg {

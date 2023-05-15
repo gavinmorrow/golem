@@ -9,6 +9,8 @@ pub struct SendMessage {
     #[serde_as(as = "DisplayFromStr")]
     pub parent: crate::model::message::Id,
     pub content: String,
+    #[serde(default)]
+    pub dedup_id: Option<String>,
 }
 
 #[derive(Clone, Debug, serde::Deserialize)]

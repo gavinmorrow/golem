@@ -2,7 +2,7 @@ use super::Snowflake;
 
 pub type Id = Snowflake;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct User {
     pub id: Id,
     pub name: String,
