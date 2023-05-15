@@ -80,7 +80,11 @@ async fn authenticate(
         }
     };
 
-    let success = auth::hash::check_passwords(user.password, user_db.password);
+    if !auth::hash::check_passwords(user.password, user_db.password) {
+        // Password incorrect
+        return vec![Reply(ServerMsg::Authenticate { success: false })];
+    }
+
     let user_id = user_db.id.clone();
     *session = Some(Session::generate(state.next_snowflake(), user_db.id));
 
