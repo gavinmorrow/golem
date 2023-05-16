@@ -71,6 +71,7 @@ impl Database {
     }
 
     pub fn get_user(&self, id: &super::user::Id) -> Result<User> {
+        debug!("Getting user {}", id.id());
         self.conn
             .query_row("SELECT * FROM users WHERE id=?1", (id.id(),), |row| {
                 Ok(User {
@@ -83,6 +84,7 @@ impl Database {
     }
 
     pub fn get_user_by_name(&self, name: &str) -> Result<User> {
+        debug!("Getting user (name: {})", name);
         self.conn
             .query_row("SELECT * FROM users WHERE name=?1", (name,), |row| {
                 Ok(User {
@@ -183,6 +185,8 @@ impl Database {
     }
 
     pub fn add_message(&self, message: &Message) -> SqlResult<()> {
+        debug!("Adding message {} to database", message.id.id());
+
         // TODO: make a proper room system
         // For now, an id of 0 means it is in the main room
         // As rooms aren't implemented yet, we just set the parent to None
@@ -200,11 +204,16 @@ impl Database {
                 <String as AsRef<str>>::as_ref(&message.content),
             ),
         )?;
+
+        debug!("Added message {} to database", message.id.id());
+
         Ok(())
     }
 
     fn map_message(&self, row: &Row) -> SqlResult<Message> {
-        // See `add_message` for why we do this
+        trace!("Mapping db row to message");
+
+        // See `add_message` for why this is done
         let parent = match self.get_snowflake_column_optional(row, 2) {
             Some(id) => id,
             None => Snowflake::try_from(0).expect("0 (hardcoded) is a valid snowflake"),
@@ -231,6 +240,7 @@ impl Database {
     }
 
     pub fn get_session_from_token(&self, token: &super::session::Token) -> Result<Session> {
+        debug!("Getting session from token {}", token);
         self.conn
             .query_row("SELECT * FROM sessions WHERE token=?1", (token,), |row| {
                 Ok(Session {
