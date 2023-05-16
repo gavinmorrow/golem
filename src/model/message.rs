@@ -10,6 +10,7 @@ pub struct Message {
     pub id: Id,
     #[serde_as(as = "DisplayFromStr")]
     pub author: user::Id,
+    pub author_name: String,
     #[serde_as(as = "DisplayFromStr")]
     pub parent: Id,
     pub content: String,

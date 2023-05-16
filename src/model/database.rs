@@ -95,6 +95,15 @@ impl Database {
             })
             .optional()
     }
+
+    pub fn get_user_name(&self, id: &super::user::Id) -> Result<String> {
+        debug!("Getting user name for user {}", id.id());
+        self.conn
+            .query_row("SELECT name FROM users WHERE id=?1", (id.id(),), |row| {
+                Ok(self.get_column(row, 0))
+            })
+            .optional()
+    }
 }
 
 /// Messages stuff
@@ -219,9 +228,15 @@ impl Database {
             None => Snowflake::try_from(0).expect("0 (hardcoded) is a valid snowflake"),
         };
 
+        let author = self.get_snowflake_column(row, 1);
+        let author_name = self
+            .get_user_name(&author)?
+            .expect("Author of message exists");
+
         Ok(Message {
             id: self.get_snowflake_column(row, 0),
-            author: self.get_snowflake_column(row, 1),
+            author,
+            author_name,
             parent,
             content: self.get_column(row, 3),
         })

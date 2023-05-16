@@ -146,14 +146,29 @@ async fn message(
         return vec![Reply(ServerMsg::Duplicate(dedup_id.unwrap()))];
     }
 
+    let database = state.database.lock().await;
+
     let author = session.user_id;
+    let author_name = match database.get_user_name(&author) {
+        Ok(Some(name)) => name,
+        Ok(None) => {
+            error!("User {:?} not found in database.", author);
+            return vec![Reply(ServerMsg::Error)];
+        }
+        Err(err) => {
+            error!("Failed to get user from database: {}", err);
+            return vec![Reply(ServerMsg::Error)];
+        }
+    };
+
     let message = Message {
         id,
         author,
+        author_name,
         parent: message.parent,
         content: message.content,
     };
-    let database = state.database.lock().await;
+
     match database.add_message(&message) {
         Ok(()) => {
             dedup_ids.push(dedup_id);

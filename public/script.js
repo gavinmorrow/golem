@@ -53,6 +53,9 @@ function handleMessage(message) {
 		case "Messages":
 			handleMessages(message);
 			break;
+		case "Join":
+			handleJoin(message);
+			break;
 		case "Error":
 			handleError(message);
 			break;
@@ -95,6 +98,13 @@ function handleMessages(message) {
 	for (const message of messages.reverse()) {
 		makeMessageElem(message).insert();
 	}
+}
+
+const joined = [];
+
+function handleJoin(message) {
+	console.log("Someone joined!", message.Join);
+	joined.push(message.Join);
 }
 
 function makeMessageElem(message) {
@@ -160,7 +170,7 @@ class ChatMessage extends HTMLElement {
 		const shadow = this.attachShadow({ mode: "open" });
 
 		const author = document.createElement("address");
-		author.textContent = `[${message.author}]`;
+		author.textContent = `[${message.author_name}]`;
 		author.setAttribute("rel", "author");
 
 		const space = document.createTextNode(" ");
