@@ -22,3 +22,7 @@ serde_with = "3.0.0"
 snowcloud = { version = "0.2.0", features = ["serde"] }
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.4.0", features = ["fs"] }
+
+[profile.frontend]
+inherits = "dev"
+opt-level = 1
