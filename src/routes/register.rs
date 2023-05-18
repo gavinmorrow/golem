@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, Json};
 use axum_macros::debug_handler;
-use log::{error, warn};
+use log::{error, info, warn};
 
 use crate::{
     auth,
@@ -48,6 +48,8 @@ pub async fn register(
         error!("Failed to add user to database: {:?}", err);
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
+
+    info!("User {} created.", snowflake.id());
 
     Ok(snowflake.id().to_string())
 }
