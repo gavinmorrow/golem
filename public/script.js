@@ -146,6 +146,11 @@ messageForm.addEventListener("submit", event => {
 	console.log(msg);
 	ws.send(msg);
 });
+messageForm.addEventListener("click", e => e.stopPropagation());
+
+document
+	.getElementById("chat")
+	.addEventListener("click", () => document.body.appendChild(messageForm));
 
 class ChatMessage extends HTMLElement {
 	static messages = [];
@@ -215,11 +220,8 @@ class ChatMessage extends HTMLElement {
 		ChatMessage.messages.push(this);
 
 		this.addEventListener("click", event => {
-			if (
-				(event.target === this || event.target === messageForm) &&
-				this.shadowRoot.contains(messageForm)
-			) {
-				event.stopPropagation();
+			if (event.target === this && this.shadowRoot.contains(messageForm)) {
+				// Allow event to propagate to parent
 				return;
 			}
 
