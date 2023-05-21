@@ -9,22 +9,40 @@
 	</head>
 	<body>
 		<noscript>You must enable JavaScript to view this page.</noscript>
-		<form id="login">
-			<label for="name">Username</label>
-			<input id="name" type="text" />
-			<br />
-			<label for="password">Password</label>
-			<input id="password" type="password" />
-			<input type="submit" value="Login" id="login-btn" />
-		</form>
-		<main>
-			<div id="chat"></div>
-		</main>
-		<form id="msg-form" style="display: none">
-			<input id="msg-input-parent" type="text" placeholder="Parent ID" style="display: none;" />
-			<input id="msg-input" type="text" placeholder="Type a message..." />
-			<input type="submit" value="send" id="send-btn" />
-		</form>
+		<div id="wrapper">
+			<nav id="nav">
+				<h1>Golem</h1>
+				<button id="show-login">Login</button>
+			</nav>
+			<main>
+				<div id="chat" role="region" aria-label="Chat">
+					<form id="msg-form" style="display: none">
+						<input
+							id="msg-input-parent"
+							type="text"
+							placeholder="Parent ID"
+							style="display: none"
+						/>
+						<input id="msg-input" type="text" placeholder="Type a message..." />
+						<input type="submit" value="send" id="send-btn" />
+					</form>
+				</div>
+			</main>
+			<aside id="nick-list">
+				<h2>People</h2>
+			</aside>
+		</div>
+		<dialog id="login-dialog">
+			<form id="login">
+				<label for="name">Username</label>
+				<input id="name" type="text" />
+				<br />
+				<label for="password">Password</label>
+				<input id="password" type="password" />
+				<br />
+				<input type="submit" value="Login" id="login-btn" />
+			</form>
+		</dialog>
 		<script src="script.js" type="module"></script>
 	</body>
 </html>
