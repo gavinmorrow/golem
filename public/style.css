@@ -1,0 +1,32 @@
+@import url("/css/defaults.css");
+
+@layer component {
+	#chat {
+		grid-area: chat;
+	}
+
+	#nick-list {
+		grid-area: nick;
+
+		display: flex;
+		flex-direction: column;
+	}
+
+	#nick-list > h2 {
+		font-size: medium;
+		margin: 0;
+	}
+
+	#nav {
+		grid-area: nav;
+
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	#nav > h1 {
+		display: inline;
+		margin: 0;
+	}
+}
