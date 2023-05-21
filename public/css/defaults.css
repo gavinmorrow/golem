@@ -1,0 +1,165 @@
+@layer reset, default, theme, component, utility, override;
+
+@import url("https://fonts.googleapis.com/css?family=Lexend&display=swap") layer(theme);
+
+@layer reset {
+	* {
+		box-sizing: border-box;
+	}
+
+	html,
+	body {
+		height: 100%;
+		margin: 0;
+		padding: 0;
+	}
+}
+
+@layer theme {
+	:root,
+	::backdrop {
+		/* Light Mode */
+		/* --color-text: #000;
+		--color-text-author: #595959;
+
+		--color-bg-root: #fff;
+		--color-bg-low: #eee;
+		--color-bg-high: #ddd;
+		--color-bg-highest: #ccc;
+
+		--midnight-green: #004953;
+		--jungle-green: #0c6a42;
+		--citrine: #e4cc37ff;
+
+		--color-bg-button: #bbb; */
+
+		/* Dark Mode */
+		--color-text: #fff;
+		--color-text-author: #a6a6a6;
+
+		--color-bg-root: hsl(187, 100%, 8%);
+		--color-bg-low: hsl(187, 100%, 10%);
+		--color-bg-high: hsl(187, 100%, 14%);
+		--color-bg-highest: hsl(187, 100%, 17%);
+
+		--color-border-neutral: hsl(154, 80%, 22%);
+		--color-border-accent: hsl(52, 76%, 45%);
+		--color-border-emphasis: hsl(52, 76%, 64%);
+
+		--tinted-black: hsl(187, 100%, 2%);
+		--midnight-teal: hsl(187, 100%, 16%);
+		--jungle-green: hsl(154, 80%, 23%);
+		--citrine: hsl(52, 76%, 55%);
+
+		--color-bg-button: hsl(52, 76%, 40%);
+		--color-bg-button-accent: hsl(52, 76%, 48%);
+		--color-bg-button-active: hsl(52, 76%, 56%);
+
+		--padding-small: 0.3rem;
+		--padding-medium: 0.5rem;
+
+		--font-family-body: Lexend, sans-serif;
+	}
+}
+
+@layer default {
+	:root {
+		color: var(--color-text);
+		background-color: var(--color-bg-root);
+		font-family: var(--font-family-body);
+	}
+}
+
+@layer component.main-grid {
+	#wrapper {
+		display: grid;
+		grid-template-columns: 5fr 1fr;
+		grid-template-rows: auto 1fr;
+		grid-template-areas:
+			"nav  nav "
+			"chat nick";
+		gap: var(--padding-medium);
+		padding: var(--padding-medium);
+
+		height: 100%;
+		width: 100%;
+	}
+
+	#wrapper > * {
+		padding: var(--padding-medium);
+		border-radius: var(--padding-medium);
+
+		background-color: var(--color-bg-low);
+
+		overflow: auto;
+	}
+}
+
+@layer default.input {
+	input {
+		background-color: var(--color-bg-highest);
+
+		color: var(--color-text);
+
+		padding: var(--padding-medium);
+		margin: var(--padding-small) 0;
+
+		border-color: var(--color-border-neutral);
+		border-style: solid;
+		border-radius: var(--padding-medium);
+		outline: none;
+
+		transition: 0.22s border ease-in-out;
+
+		font-size: medium;
+	}
+
+	input:hover {
+		border-color: var(--color-border-accent);
+	}
+
+	input:focus {
+		border-color: var(--color-border-emphasis);
+	}
+}
+
+@layer default.button {
+	button,
+	input:is([type="button"], [type="submit"], [type="reset"]) {
+		background-color: var(--color-bg-button);
+		border: none;
+
+		font-size: medium;
+
+		padding: var(--padding-medium);
+		border-radius: var(--padding-medium);
+
+		transition: 0.22s background-color ease-in-out;
+	}
+
+	button:hover,
+	button:focus,
+	input:is([type="button"], [type="submit"], [type="reset"]):hover,
+	input:is([type="button"], [type="submit"], [type="reset"]):focus {
+		background-color: var(--color-bg-button-accent);
+	}
+
+	button:active,
+	input:is([type="button"], [type="submit"], [type="reset"]):active {
+		background-color: var(--color-bg-button-active);
+	}
+}
+
+@layer default.dialog {
+	dialog {
+		color: var(--color-text);
+		background-color: var(--color-bg-low);
+		border-radius: var(--padding-medium);
+		border: none;
+	}
+
+	dialog::backdrop {
+		background-color: var(--tinted-black);
+		opacity: 0.75;
+	}
+}
