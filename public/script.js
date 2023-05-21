@@ -1,136 +1,10 @@
-// Connect to the websocket endpoint
-const HOST = "localhost:7878";
-const ws = new WebSocket(`ws://${HOST}/api/ws/`);
+import ws from "./js/ws.js";
+import { messageForm } from "./js/custom-elements/ChatMessage.js";
 
-ws.addEventListener("message", event => {
-	const data = JSON.parse(event.data);
-	if (data != null) handleMessage(JSON.parse(event.data));
-	else console.error("Invalid message received:", event.data);
+document.getElementById("show-login").addEventListener("click", () => {
+	document.getElementById("login-dialog").showModal();
 });
 
-ws.addEventListener("open", event => {
-	console.log("Connected to the websocket endpoint!");
-
-	// Load messages
-	getMessages(ws);
-
-	// Authenticate
-	ws.send(
-		JSON.stringify({
-			Authenticate: {
-				name: "Gavin",
-				password: "123456",
-			},
-		})
-	);
-});
-
-ws.addEventListener("error", event => {
-	console.log("Error", event);
-});
-
-ws.addEventListener("close", event => {
-	console.log("Disconnected from the websocket endpoint!");
-});
-
-function getMessages(ws) {
-	ws.send(
-		JSON.stringify({
-			LoadAllMessages: null,
-		})
-	);
-}
-
-function handleMessage(message) {
-	console.log("Got message:", message);
-	switch (Object.keys(message)[0]) {
-		case "Authenticate":
-			handleAuthenticate(message);
-			break;
-		case "NewMessage":
-			handleNewMessage(message);
-			break;
-		case "Messages":
-			handleMessages(message);
-			break;
-		case "Join":
-			handleJoin(message);
-			break;
-		case "Error":
-			handleError(message);
-			break;
-		default:
-			console.error("Unknown message type:", message);
-	}
-}
-
-function handleAuthenticate(message) {
-	if (message.Authenticate.success) {
-		console.log("Successfully authenticated!");
-
-		// Hide login form
-		document.getElementById("login").outerHTML = "<p>Logged in!</p>";
-
-		// Show send message form
-		document.getElementById("msg-form").style.display = "block";
-	} else {
-		console.error("Failed to authenticate:", message.Authenticate.error);
-	}
-}
-
-function handleNewMessage(message) {
-	console.log("New message:", message.NewMessage);
-
-	message = message.NewMessage;
-
-	const chat = document.getElementById("chat");
-	makeMessageElem(message).insert();
-}
-
-function handleMessages(message) {
-	console.log("Messages:", message.Messages);
-
-	const messages = message.Messages;
-
-	// Add to DOM
-	const chat = document.getElementById("chat");
-
-	for (const message of messages.reverse()) {
-		makeMessageElem(message).insert();
-	}
-}
-
-const joined = [];
-
-function handleJoin(message) {
-	console.log("Someone joined!", message.Join);
-	joined.push(message.Join);
-}
-
-function makeMessageElem(message) {
-	return new ChatMessage(message);
-}
-
-function handleError(message) {
-	console.error("Error:", message.Error);
-}
-
-document.getElementById("login").addEventListener("submit", event => {
-	event.preventDefault();
-	const name = document.getElementById("name").value;
-	const password = document.getElementById("password").value;
-
-	ws.send(
-		JSON.stringify({
-			Authenticate: {
-				name,
-				password,
-			},
-		})
-	);
-});
-
-const messageForm = document.getElementById("msg-form");
 messageForm.addEventListener("submit", event => {
 	event.preventDefault();
 	const content = messageForm.querySelector("#msg-input").value;
@@ -148,131 +22,19 @@ messageForm.addEventListener("submit", event => {
 });
 messageForm.addEventListener("click", e => e.stopPropagation());
 
-document
-	.getElementById("chat")
-	.addEventListener("click", () => document.body.appendChild(messageForm));
+document.getElementById("login").addEventListener("submit", event => {
+	event.preventDefault();
+	const name = document.getElementById("name").value;
+	const password = document.getElementById("password").value;
 
-class ChatMessage extends HTMLElement {
-	static messages = [];
+	ws.send(
+		JSON.stringify({
+			Authenticate: {
+				name,
+				password,
+			},
+		})
+	);
 
-	/**
-	 * @type {Object}
-	 * @property {string} id
-	 * @property {string} author
-	 * @property {string} parent
-	 * @property {string} content
-	 */
-	message;
-
-	children = [];
-
-	constructor(message) {
-		super();
-
-		this.message = message;
-
-		// Create shadow DOM
-		const shadow = this.attachShadow({ mode: "open" });
-
-		const author = document.createElement("address");
-		author.textContent = `[${message.author_name}]`;
-		author.setAttribute("rel", "author");
-
-		const space = document.createTextNode(" ");
-
-		const content = document.createElement("span");
-		content.textContent = message.content;
-
-		const style = document.createElement("style");
-		style.textContent = `
-		address, span {
-			margin-left: 0;
-			display: inline-block;
-		}
-
-		address {
-			color: gray;
-			font-style: normal;
-		}
-
-		chat-message, form {
-			margin-left: 1em;
-			display: block;
-			position: relative;
-		}
-
-		chat-message::before, form::before {
-			content: "";
-			display: block;
-			width: 1px;
-			height: 100%;
-			background-color: gray;
-			left: -1em;
-			position: absolute;
-		}
-		`;
-
-		shadow.appendChild(author);
-		shadow.appendChild(space);
-		shadow.appendChild(content);
-		shadow.appendChild(style);
-
-		ChatMessage.messages.push(this);
-
-		this.addEventListener("click", event => {
-			if (event.target === this && this.shadowRoot.contains(messageForm)) {
-				// Allow event to propagate to parent
-				return;
-			}
-
-			this.insertMessageInput();
-			event.stopPropagation();
-		});
-	}
-
-	connectedCallback() {
-		this.setAttribute("class", "message");
-		this.setAttribute("id", `msg-${this.message.id}`);
-		this.setAttribute("data-author", this.message.author);
-		this.setAttribute("data-parent", this.message.parent);
-		this.setAttribute("data-content", this.message.content);
-		this.style.display = "block";
-		this.style.position = "relative";
-	}
-
-	addChild(child) {
-		// Add to DOM
-		this.shadowRoot.appendChild(child);
-
-		// If needed, move form down
-		if (this.shadowRoot.contains(messageForm)) {
-			this.shadowRoot.appendChild(messageForm);
-		}
-
-		this.children.push(child);
-	}
-
-	insert(root = document.getElementById("chat")) {
-		if (this.message.parent === "0") {
-			root.appendChild(this);
-			return;
-		}
-
-		const parent = ChatMessage.messages.filter(
-			msg => msg.message.id === this.message.parent
-		)[0];
-
-		if (parent == null) {
-			throw new Error(`Parent message not found: ${this.message.parent}`);
-		}
-
-		parent.addChild(this);
-	}
-
-	insertMessageInput() {
-		this.shadowRoot.appendChild(messageForm);
-		messageForm.querySelector("#msg-input-parent").value = this.message.id;
-	}
-}
-
-customElements.define("chat-message", ChatMessage);
+	document.getElementById("login-dialog").close();
+});
