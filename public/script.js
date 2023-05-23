@@ -1,6 +1,16 @@
 import ws from "./js/ws.js";
 import { messageForm } from "./js/custom-elements/ChatMessage.js";
 
+let session = localStorage.getItem("session");
+if (session != null) {
+	// Attempt to login via session
+	ws.send(
+		JSON.stringify({
+			AuthenticateToken: session,
+		})
+	);
+}
+
 document.getElementById("show-login").addEventListener("click", () => {
 	document.getElementById("login-dialog").showModal();
 });
