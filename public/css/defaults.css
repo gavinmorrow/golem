@@ -58,6 +58,8 @@
 		--padding-small: 0.3rem;
 		--padding-medium: 0.5rem;
 
+		--border-width: medium;
+
 		--font-family-body: Lexend, sans-serif;
 	}
 }
@@ -107,6 +109,7 @@
 		border-color: var(--color-border-neutral);
 		border-style: solid;
 		border-radius: var(--padding-medium);
+		border-width: var(--border-width);
 		outline: none;
 
 		transition: 0.22s border ease-in-out;
@@ -126,27 +129,31 @@
 @layer default.button {
 	button,
 	input:is([type="button"], [type="submit"], [type="reset"]) {
-		background-color: var(--color-bg-button);
-		border: none;
+		--color-bg: var(--color-bg-button);
+		background-color: var(--color-bg);
+
+		border-color: var(--color-bg);
+		border-width: var(--border-width);
+		border-style: solid;
 
 		font-size: medium;
 
 		padding: var(--padding-medium);
 		border-radius: var(--padding-medium);
 
-		transition: 0.22s background-color ease-in-out;
+		transition: 0.22s background-color ease-in-out, 0.22s border ease-in-out;
 	}
 
 	button:hover,
 	button:focus,
 	input:is([type="button"], [type="submit"], [type="reset"]):hover,
 	input:is([type="button"], [type="submit"], [type="reset"]):focus {
-		background-color: var(--color-bg-button-accent);
+		--color-bg: var(--color-bg-button-accent);
 	}
 
 	button:active,
 	input:is([type="button"], [type="submit"], [type="reset"]):active {
-		background-color: var(--color-bg-button-active);
+		--color-bg: var(--color-bg-button-active);
 	}
 }
 
