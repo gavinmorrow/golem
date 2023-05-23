@@ -27,8 +27,8 @@ function handleAuthenticate(message) {
 	if (message.Authenticate.success) {
 		console.log("Successfully authenticated!");
 
-		// Hide login form
-		document.getElementById("login").style.display = "none";
+		// // Hide login form
+		// document.getElementById("login").style.display = "none";
 
 		// Show send message form
 		messageForm.style.display = "block";
