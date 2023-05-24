@@ -50,5 +50,5 @@ pub async fn authenticate<B>(
 }
 
 fn parse_token(token: &str) -> Option<Token> {
-    token.parse::<u64>().ok()
+    token.parse::<crate::model::session::Token>().ok()
 }

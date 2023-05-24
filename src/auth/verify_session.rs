@@ -8,7 +8,10 @@ pub enum Error {
     DatabaseError,
 }
 
-pub fn verify_session(token: u64, database: MutexGuard<Database>) -> Result<Session, Error> {
+pub fn verify_session(
+    token: crate::model::session::Token,
+    database: MutexGuard<Database>,
+) -> Result<Session, Error> {
     // Get and verify session
     match database.get_session_from_token(&token) {
         Ok(Some(session)) => return Ok(session),
