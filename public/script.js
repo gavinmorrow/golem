@@ -32,11 +32,14 @@ messageForm.addEventListener("submit", event => {
 });
 messageForm.addEventListener("click", e => e.stopPropagation());
 
-document.getElementById("login").addEventListener("submit", event => {
+document.getElementById("login").addEventListener("submit", async event => {
 	event.preventDefault();
 	const name = document.getElementById("name").value;
 	const password = document.getElementById("password").value;
 
+	await login(name, password);
+
+	// TODO: login w/ the token (should be cookies)
 	ws.send(
 		JSON.stringify({
 			Authenticate: {
@@ -48,3 +51,27 @@ document.getElementById("login").addEventListener("submit", event => {
 
 	document.getElementById("login-dialog").close();
 });
+
+async function login(name, password) {
+	const res = await fetch("/api/login", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			name,
+			password,
+		}),
+	});
+
+	if (res.status === 404 /* Not Found */) {
+		alert(`User ${name} not found!`);
+		return;
+	} else if (res.status === 401 /* Unauthorized */) {
+		alert("Incorrect password!");
+		return;
+	} else if (res.status === 500 /* Internal Server Error */) {
+		alert("There was an error.");
+		return;
+	}
+}
