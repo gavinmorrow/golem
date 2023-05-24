@@ -73,7 +73,9 @@ async fn handler(
         }
     };
 
-    ws.on_upgrade(move |ws| handle_ws(ws, state.appstate.clone(), session, state.tx.clone()))
+    let appstate = state.appstate.clone();
+    let tx = state.tx.clone();
+    ws.on_upgrade(move |ws| handle_ws(ws, appstate, session, tx))
 }
 
 // Naming note (for types and variables):
