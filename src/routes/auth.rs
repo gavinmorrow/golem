@@ -49,6 +49,10 @@ pub async fn authenticate<B>(
     response
 }
 
+pub fn get_session_token(cookies: Cookie) -> Option<crate::model::session::Token> {
+    parse_token(cookies.get("token")?)
+}
+
 fn parse_token(token: &str) -> Option<Token> {
     token.parse::<crate::model::session::Token>().ok()
 }
