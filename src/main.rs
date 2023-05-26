@@ -18,31 +18,35 @@ const PRIMARY_ID: i64 = 1;
 
 const ROOT_PATH: &str = "127.0.0.1:7878";
 
-#[tokio::main]
-async fn main() {
-    logger::init();
+// #[tokio::main]
+fn main() {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        println!("hello");
+        logger::init();
 
-    info!("Starting golem server at {}", ROOT_PATH);
+        info!("Starting golem server at {}", ROOT_PATH);
 
-    let state = AppState::new();
+        let state = AppState::new();
 
-    let app = Router::new()
-        .route("/api/user/:id", get(routes::get_user))
-        .route("/api/logout", post(routes::sessions::logout))
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            routes::auth::authenticate,
-        ))
-        .nest("/api/ws", routes::ws::router(state.clone().into()))
-        .route("/api/login", post(routes::sessions::login))
-        .route("/api/register", post(routes::register::register))
-        .route("/api/snowflake", get(routes::snowflake))
-        .route("/api/snapshot", get(routes::messages::get_snapshot))
-        .nest_service("/", ServeDir::new("public"))
-        .with_state(state.into());
+        let app = Router::new()
+            .route("/api/user/:id", get(routes::get_user))
+            .route("/api/logout", post(routes::sessions::logout))
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                routes::auth::authenticate,
+            ))
+            .nest("/api/ws", routes::ws::router(state.clone().into()))
+            .route("/api/login", post(routes::sessions::login))
+            .route("/api/register", post(routes::register::register))
+            .route("/api/snowflake", get(routes::snowflake))
+            .route("/api/snapshot", get(routes::messages::get_snapshot))
+            .nest_service("/", ServeDir::new("public"))
+            .with_state(state.into());
 
-    axum::Server::bind(&ROOT_PATH.parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+        axum::Server::bind(&ROOT_PATH.parse().unwrap())
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+    })
 }

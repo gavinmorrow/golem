@@ -96,17 +96,19 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, session: Option<Session>
     let rx = tx.subscribe();
 
     // Send messages
-    let mut send_task = tokio::spawn(broadcast_handler(rx, id, sender));
+    let send_task = tokio::spawn(broadcast_handler(rx, id, sender));
 
     let tx = tx.clone();
 
-    let mut recv_task = tokio::spawn(recv::recv_ws(receiver, session, state, id, tx));
+    let recv_task = tokio::spawn(recv::recv_ws(receiver, session, state, id, tx));
 
     // If any one of the tasks run to completion, we abort the other.
-    tokio::select! {
-        _ = (&mut send_task) => recv_task.abort(),
-        _ = (&mut recv_task) => send_task.abort(),
+    let (_, uncompleted_task) = match futures::future::select(recv_task, send_task).await {
+        futures::future::Either::Left(tasks) => tasks,
+        futures::future::Either::Right(tasks) => tasks,
     };
+
+    uncompleted_task.abort();
 
     trace!("ws connection closed");
 }
