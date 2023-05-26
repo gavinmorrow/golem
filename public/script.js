@@ -39,7 +39,7 @@ document.getElementById("login").addEventListener("submit", async event => {
 
 	await login(name, password);
 
-	// TODO: login w/ the token (should be cookies)
+	// Also login this way, because otherwise we would have to reload the page.
 	ws.send(
 		JSON.stringify({
 			Authenticate: {
