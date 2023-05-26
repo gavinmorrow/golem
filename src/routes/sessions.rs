@@ -66,9 +66,8 @@ pub async fn login(
 fn make_cookie(token: crate::model::session::Token) -> String {
     format!(
         // In production, the secure flag should be present
-        "token={}; Max-Age={}; HttpOnly; SameSite=Lax",
+        "token={}; HttpOnly; SameSite=Lax; Path=/;",
         token,
-        1000 * 60 * 60 * 24 * 3 // 3 days in milliseconds
     )
 }
 
