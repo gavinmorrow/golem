@@ -10,7 +10,7 @@ argon2 = "0.5.0"
 axum = { version = "0.6.12", features = ["headers", "ws"] }
 axum-macros = "0.3.7"
 fern = { version = "0.6.2", features = ["colored"] }
-futures = { version = "0.3.28", default-features = false }
+futures = "0.3.28"
 humantime = "2.1.0"
 log = "0.4.17"
 rand = "0.8.5"
@@ -20,7 +20,7 @@ serde = "1.0.163"
 serde_json = "1.0.96"
 serde_with = "3.0.0"
 snowcloud = { version = "0.2.0", features = ["serde"] }
-tokio = { version = "1", features = ["rt-multi-thread"] }
+tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.4.0", features = ["fs"] }
 
 [profile.frontend]
