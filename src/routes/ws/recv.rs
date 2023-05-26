@@ -27,6 +27,22 @@ pub(super) async fn recv_ws(
 ) {
     let mut dedup_ids = Vec::new();
 
+    // Check if already authenticated
+    if session.is_some() {
+        debug!("Sending authentication success message to client {}", id);
+
+        let msg = BroadcastMsg {
+            target: broadcast_msg::Target::One(id),
+            content: super::ServerMsg::Authenticate { success: true },
+        };
+
+        if let Err(err) = tx.send(msg) {
+            debug!("Failed to send authenticated message: {}", err);
+        }
+    } else {
+        debug!("Client {} is not authenticated", id);
+    }
+
     while let Some(Ok(msg)) = receiver.next().await {
         if let ws::Message::Close(_) = msg {
             // client closing

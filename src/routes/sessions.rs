@@ -23,6 +23,8 @@ pub async fn login(
     State(state): State<Arc<AppState>>,
     Json(user_body): Json<CreateUser>,
 ) -> Response {
+    debug!("Got login request for user: {}", user_body.name);
+
     // Get id
     let db = state.database.lock().await;
     let user_db = match db.get_user_by_name(&user_body.name) {
@@ -61,11 +63,11 @@ pub async fn login(
     response
 }
 
-fn make_cookie(token: u64) -> String {
+fn make_cookie(token: crate::model::session::Token) -> String {
     format!(
-        "token={}; Max-Age={}; Secure; HttpOnly; SameSite=Lax",
+        // In production, the secure flag should be present
+        "token={}; HttpOnly; SameSite=Lax; Path=/;",
         token,
-        1000 * 60 * 60 * 24 * 3 // 3 days in milliseconds
     )
 }
 

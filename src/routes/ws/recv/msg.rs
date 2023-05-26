@@ -21,7 +21,7 @@ pub struct PartialUser {
 
 #[derive(Clone, Debug, serde::Deserialize)]
 pub enum ClientMsg {
-    AuthenticateToken(u64),
+    AuthenticateToken(crate::model::session::Token),
     Authenticate(PartialUser),
     Pong,
     Message(SendMessage),

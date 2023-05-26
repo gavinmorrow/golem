@@ -2,9 +2,11 @@ use std::sync::Arc;
 
 use axum::{
     extract::{ws::WebSocket, State, WebSocketUpgrade},
-    response::Response,
+    headers::Cookie,
+    http::StatusCode,
+    response::{IntoResponse, Response},
     routing::get,
-    Router,
+    Router, TypedHeader,
 };
 use axum_macros::debug_handler;
 use futures::StreamExt;
@@ -12,6 +14,7 @@ use log::trace;
 use tokio::sync::broadcast;
 
 use crate::{
+    auth,
     model::{AppState, Message, Session, User},
     routes::ws::broadcast_handler::broadcast_handler,
 };
@@ -39,9 +42,40 @@ pub fn router(state: Arc<AppState>) -> Router<Arc<AppState>> {
 }
 
 #[debug_handler]
-async fn handler(ws: WebSocketUpgrade, State(state): State<Arc<WsState>>) -> Response {
+async fn handler(
+    TypedHeader(cookies): TypedHeader<Cookie>,
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<WsState>>,
+) -> Response {
     trace!("ws connection requested");
-    ws.on_upgrade(move |ws| handle_ws(ws, state.appstate.clone(), state.tx.clone()))
+
+    let database = state.appstate.database.lock().await;
+    let session = match crate::routes::auth::get_session_token(cookies) {
+        Some(token) => match auth::verify_session(token, database) {
+            Ok(session) => {
+                trace!(
+                    "Request authenticated with a session token of {}",
+                    session.token
+                );
+                Some(session)
+            }
+            Err(crate::auth::verify_session::Error::SessionNotFound) => {
+                trace!("Session not found. Request continuing without authentication");
+                None
+            }
+            Err(crate::auth::verify_session::Error::DatabaseError) => {
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        },
+        None => {
+            trace!("Request continuing without authentication");
+            None
+        }
+    };
+
+    let appstate = state.appstate.clone();
+    let tx = state.tx.clone();
+    ws.on_upgrade(move |ws| handle_ws(ws, appstate, session, tx))
 }
 
 // Naming note (for types and variables):
@@ -52,10 +86,9 @@ async fn handler(ws: WebSocketUpgrade, State(state): State<Arc<WsState>>) -> Res
 // - Use `message` when you're referring to a
 //   message in the database/chat
 
-async fn handle_ws(ws: WebSocket, state: Arc<AppState>, tx: Sender) {
+async fn handle_ws(ws: WebSocket, state: Arc<AppState>, session: Option<Session>, tx: Sender) {
     trace!("ws connection opened");
 
-    let session: Option<Session> = None;
     let id = state.next_snowflake().id();
 
     // Split ws to send and receive at the same time

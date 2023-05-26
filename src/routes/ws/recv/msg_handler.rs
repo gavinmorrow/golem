@@ -48,7 +48,7 @@ pub(super) async fn handle_message(
 
 async fn authenticate_token(
     state: &Arc<AppState>,
-    token: u64,
+    token: crate::model::session::Token,
     session: &mut Option<Session>,
 ) -> Response {
     trace!("Authenticating user from token");

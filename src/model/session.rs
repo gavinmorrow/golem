@@ -3,7 +3,7 @@ use crate::auth;
 use super::Snowflake;
 
 pub type Id = Snowflake;
-pub type Token = u64;
+pub type Token = i64;
 
 #[derive(Clone, Debug)]
 pub struct Session {

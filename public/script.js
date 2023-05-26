@@ -1,6 +1,16 @@
 import ws from "./js/ws.js";
 import { messageForm } from "./js/custom-elements/ChatMessage.js";
 
+let session = localStorage.getItem("session");
+if (session != null) {
+	// Attempt to login via session
+	ws.send(
+		JSON.stringify({
+			AuthenticateToken: session,
+		})
+	);
+}
+
 document.getElementById("show-login").addEventListener("click", () => {
 	document.getElementById("login-dialog").showModal();
 });
@@ -22,11 +32,14 @@ messageForm.addEventListener("submit", event => {
 });
 messageForm.addEventListener("click", e => e.stopPropagation());
 
-document.getElementById("login").addEventListener("submit", event => {
+document.getElementById("login").addEventListener("submit", async event => {
 	event.preventDefault();
 	const name = document.getElementById("name").value;
 	const password = document.getElementById("password").value;
 
+	await login(name, password);
+
+	// Also login this way, because otherwise we would have to reload the page.
 	ws.send(
 		JSON.stringify({
 			Authenticate: {
@@ -38,3 +51,27 @@ document.getElementById("login").addEventListener("submit", event => {
 
 	document.getElementById("login-dialog").close();
 });
+
+async function login(name, password) {
+	const res = await fetch("/api/login", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			name,
+			password,
+		}),
+	});
+
+	if (res.status === 404 /* Not Found */) {
+		alert(`User ${name} not found!`);
+		return;
+	} else if (res.status === 401 /* Unauthorized */) {
+		alert("Incorrect password!");
+		return;
+	} else if (res.status === 500 /* Internal Server Error */) {
+		alert("There was an error.");
+		return;
+	}
+}

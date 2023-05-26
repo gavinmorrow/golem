@@ -46,7 +46,7 @@ impl Database {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS sessions (
                 id      INT PRIMARY KEY,
-                token   INT,
+                token   INT NOT NULL,
                 user    INT NOT NULL,
                 FOREIGN KEY(user) REFERENCES users(id)
             )",
@@ -246,7 +246,7 @@ impl Database {
 /// Session stuff
 impl Database {
     pub fn add_session(&self, session: Session) -> SqlResult<()> {
-        debug!("Adding session: {:?}", session);
+        debug!("Adding session: {:?}", session.id.id());
         self.conn.execute(
             "INSERT INTO sessions (id, token, user) VALUES (?1, ?2, ?3)",
             (session.id.id(), session.token, session.user_id.id()),
