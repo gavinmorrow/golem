@@ -33,11 +33,11 @@ impl Database {
 
         conn.execute(
             "CREATE TABLE IF NOT EXISTS messages (
-                id      INT PRIMARY KEY,
-                author  INT NOT NULL,
-                parent  INT,
-                content TEXT NOT NULL,
-                FOREIGN KEY(author) REFERENCES users(id),
+                id          INT PRIMARY KEY,
+                author      INT NOT NULL,
+                author_name TEXT NOT NULL,
+                parent      INT,
+                content     TEXT NOT NULL,
                 FOREIGN KEY(parent) REFERENCES messages(id)
             )",
             (),
@@ -205,10 +205,11 @@ impl Database {
         };
 
         self.conn.execute(
-            "INSERT INTO messages (id, author, parent, content) VALUES (?1, ?2, ?3, ?4)",
+            "INSERT INTO messages (id, author, author_name, parent, content) VALUES (?1, ?2, ?3, ?4, ?5)",
             (
                 message.id.id(),
                 message.author.id(),
+                message.author_name.as_str(),
                 parent,
                 <String as AsRef<str>>::as_ref(&message.content),
             ),
@@ -223,22 +224,20 @@ impl Database {
         trace!("Mapping db row to message");
 
         // See `add_message` for why this is done
-        let parent = match self.get_snowflake_column_optional(row, 2) {
+        let parent = match self.get_snowflake_column_optional(row, 3) {
             Some(id) => id,
             None => Snowflake::try_from(0).expect("0 (hardcoded) is a valid snowflake"),
         };
 
         let author = self.get_snowflake_column(row, 1);
-        let author_name = self
-            .get_user_name(&author)?
-            .expect("Author of message exists");
+        let author_name = self.get_column(row, 2);
 
         Ok(Message {
             id: self.get_snowflake_column(row, 0),
             author,
             author_name,
             parent,
-            content: self.get_column(row, 3),
+            content: self.get_column(row, 4),
         })
     }
 }
