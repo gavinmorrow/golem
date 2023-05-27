@@ -5,10 +5,11 @@ use futures::StreamExt;
 use log::{debug, trace};
 use tokio::sync::broadcast;
 
-use crate::model::{AppState, Session};
+use crate::model::AppState;
 
 use super::{
     broadcast_msg::{self, BroadcastMsg},
+    presence::Presence,
     Broadcast,
 };
 
@@ -20,7 +21,7 @@ mod msg_handler;
 
 pub(super) async fn recv_ws(
     mut receiver: futures::stream::SplitStream<WebSocket>,
-    mut session: Option<Session>,
+    mut presence: Presence,
     state: Arc<AppState>,
     id: i64,
     tx: broadcast::Sender<Broadcast>,
@@ -28,7 +29,7 @@ pub(super) async fn recv_ws(
     let mut dedup_ids = Vec::new();
 
     // Check if already authenticated
-    if session.is_some() {
+    if presence.session.is_some() {
         debug!("Sending authentication success message to client {}", id);
 
         let msg = BroadcastMsg {
@@ -66,7 +67,7 @@ pub(super) async fn recv_ws(
         debug!("received message: {:?}", msg);
 
         let msg_responses =
-            msg_handler::handle_message(msg, &mut session, &mut dedup_ids, state.clone()).await;
+            msg_handler::handle_message(msg, &mut presence, &mut dedup_ids, state.clone()).await;
 
         match msg_responses {
             Some(msg_responses) => {

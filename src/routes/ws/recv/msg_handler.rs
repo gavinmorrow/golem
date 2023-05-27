@@ -3,6 +3,7 @@ use std::sync::Arc;
 use log::{debug, error, trace};
 
 use crate::model::Snowflake;
+use crate::routes::ws::presence::Presence;
 use crate::{auth, model::Message};
 
 use super::super::{AppState, ServerMsg, Session};
@@ -20,25 +21,16 @@ type Response = Vec<HandlerResult>;
 
 pub(super) async fn handle_message(
     msg: ClientMsg,
-    session: &mut Option<Session>,
+    presence: &mut Presence,
     mut dedup_ids: &mut Vec<Option<String>>,
     state: Arc<AppState>,
 ) -> Option<Response> {
     Some(match msg {
-        ClientMsg::AuthenticateToken(token) => authenticate_token(&state, token, session).await,
-        ClientMsg::Authenticate(user) => authenticate(&state, user, session).await,
+        ClientMsg::AuthenticateToken(token) => authenticate_token(&state, token, presence).await,
+        ClientMsg::Authenticate(user) => authenticate(&state, user, presence).await,
         ClientMsg::Pong => return None,
         ClientMsg::Message(send_message) => {
-            match session {
-                Some(session) => {
-                    message(&state, session.clone(), &mut dedup_ids, send_message).await
-                }
-                None => {
-                    // Client isn't authenticated
-                    trace!("Client attempted to send message without authenticating");
-                    vec![Reply(ServerMsg::Unauthenticated)]
-                }
-            }
+            message(&state, presence.clone(), &mut dedup_ids, send_message).await
         }
         ClientMsg::LoadAllMessages => load_all_messages(&state).await,
         ClientMsg::LoadMessages { before, amount } => load_messages(&state, before, amount).await,
@@ -49,7 +41,7 @@ pub(super) async fn handle_message(
 async fn authenticate_token(
     state: &Arc<AppState>,
     token: crate::model::session::Token,
-    session: &mut Option<Session>,
+    presence: &mut Presence,
 ) -> Response {
     trace!("Authenticating user from token");
 
@@ -60,7 +52,8 @@ async fn authenticate_token(
     };
 
     let user_id = session_db.user_id.clone();
-    *session = Some(session_db);
+    presence.session = Some(session_db);
+    // TODO: set name in presence
 
     // Don't need to drop database here because it was moved into the auth::verify_session function
     // and is dropped there.
@@ -71,7 +64,7 @@ async fn authenticate_token(
 async fn authenticate(
     state: &Arc<AppState>,
     user: PartialUser,
-    session: &mut Option<Session>,
+    presence: &mut Presence,
 ) -> Response {
     trace!("Authenticating user from credentials");
 
@@ -95,13 +88,20 @@ async fn authenticate(
     }
 
     let user_id = user_db.id.clone();
-    *session = Some(Session::generate(state.next_snowflake(), user_db.id));
+    presence.session = Some(Session::generate(state.next_snowflake(), user_db.id));
+    presence.name = user.name;
 
     drop(database); // Prevent deadlock
 
     finish_authentication(state, user_id).await
 }
 
+/// Finish authentication once the session has been created and set
+/// by sending the user's data to the client and broadcasting their presence.
+///
+/// # Deadlock
+///
+/// Deadlocks can occur if the database is locked when this function is called.
 async fn finish_authentication(state: &Arc<AppState>, user_id: crate::model::user::Id) -> Response {
     // resolve user
     let mut user = match state.database.lock().await.get_user(&user_id) {
@@ -128,11 +128,11 @@ async fn finish_authentication(state: &Arc<AppState>, user_id: crate::model::use
 
 async fn message(
     state: &Arc<AppState>,
-    session: Session,
+    presence: Presence,
     dedup_ids: &mut Vec<Option<String>>,
     message: SendMessage,
 ) -> Response {
-    debug!("Received message from client {}", session.id);
+    debug!("Received message from client {}", presence.id);
 
     let id = state.next_snowflake();
 
@@ -141,30 +141,17 @@ async fn message(
         // Message is a duplicate
         debug!(
             "Duplicate message detected: {:?} from client {}",
-            dedup_id, session.id
+            dedup_id, presence.id
         );
         return vec![Reply(ServerMsg::Duplicate(dedup_id.unwrap()))];
     }
 
     let database = state.database.lock().await;
 
-    let author = session.user_id;
-    let author_name = match database.get_user_name(&author) {
-        Ok(Some(name)) => name,
-        Ok(None) => {
-            error!("User {:?} not found in database.", author);
-            return vec![Reply(ServerMsg::Error)];
-        }
-        Err(err) => {
-            error!("Failed to get user from database: {}", err);
-            return vec![Reply(ServerMsg::Error)];
-        }
-    };
-
     let message = Message {
         id,
-        author,
-        author_name,
+        author: presence.session.map(|s| s.user_id).unwrap_or(presence.id),
+        author_name: presence.name,
         parent: message.parent,
         content: message.content,
     };
