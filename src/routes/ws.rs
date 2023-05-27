@@ -24,7 +24,7 @@ use self::{broadcast_msg::BroadcastMsg, state::WsState};
 mod broadcast_handler;
 mod broadcast_msg;
 mod recv;
-mod session;
+mod presence;
 mod state;
 
 type Broadcast = BroadcastMsg<ServerMsg>;
