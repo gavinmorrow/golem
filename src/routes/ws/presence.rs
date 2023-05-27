@@ -1,8 +1,8 @@
-use crate::model::Snowflake;
+use crate::model::{Session, Snowflake};
 
+#[derive(Clone)]
 pub(super) struct Presence {
     pub(super) id: Snowflake,
-    pub(super) session_id: crate::model::session::Id,
+    pub(super) session: Option<Session>,
     pub(super) name: String,
-    pub(super) user: Option<crate::model::user::Id>,
 }
