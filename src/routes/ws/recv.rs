@@ -85,6 +85,7 @@ pub(super) async fn recv_ws(
                     match response {
                         HandlerResult::Reply(msg) => {
                             debug!("sending message to {}", id);
+                            trace!("sending message to {}: {:?}", id, msg); // Trace because logging the whole message is too verbose
                             let msg = BroadcastMsg {
                                 target: broadcast_msg::Target::One(id),
                                 content: msg,
@@ -95,6 +96,7 @@ pub(super) async fn recv_ws(
                         }
                         HandlerResult::Broadcast(msg) => {
                             trace!("broadcasting message");
+                            trace!("broadcasting message: {:?}", msg); // Trace because logging the whole message is too verbose
                             let msg = BroadcastMsg {
                                 target: broadcast_msg::Target::All,
                                 content: msg,
