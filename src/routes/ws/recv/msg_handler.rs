@@ -77,11 +77,11 @@ async fn authenticate(
     presence.name = user.name;
 
     return vec![
+        Broadcast(ServerMsg::Update(presence.clone())),
         Reply(ServerMsg::Authenticate {
             success: true,
             presence_id,
         }),
-        Broadcast(ServerMsg::Update(presence.clone())),
     ];
 }
 
