@@ -153,7 +153,5 @@ async fn load_children(state: Arc<AppState>, parent: Snowflake, depth: u8) -> Re
 async fn change_name(_state: &AppState, presence: &mut Presence, name: String) -> Response {
     presence.name = name;
 
-    vec![Reply(ServerMsg::Update(presence.clone()))];
-
-    todo!();
+    vec![Reply(ServerMsg::Update(presence.clone()))]
 }
