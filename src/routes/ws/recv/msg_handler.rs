@@ -46,13 +46,18 @@ async fn authenticate(
 ) -> Response {
     trace!("Authenticating user from credentials");
 
+    let presence_id = presence.id.to_string();
+
     let database = state.database.lock().await;
     let user_db = match database.get_user_by_name(&user.name) {
         Ok(Some(user)) => user,
         Ok(None) => {
             // User doesn't exist
             error!("User not found in database: {}", user.name);
-            return vec![Reply(ServerMsg::Authenticate { success: false })];
+            return vec![Reply(ServerMsg::Authenticate {
+                success: false,
+                presence_id,
+            })];
         }
         Err(err) => {
             error!("Failed to get user from database: {}", err);
@@ -62,14 +67,20 @@ async fn authenticate(
 
     if !auth::hash::check_passwords(user.password, user_db.password) {
         // Password incorrect
-        return vec![Reply(ServerMsg::Authenticate { success: false })];
+        return vec![Reply(ServerMsg::Authenticate {
+            success: false,
+            presence_id,
+        })];
     }
 
     presence.session = Some(Session::generate(state.next_snowflake(), user_db.id));
     presence.name = user.name;
 
     return vec![
-        Reply(ServerMsg::Authenticate { success: true }),
+        Reply(ServerMsg::Authenticate {
+            success: true,
+            presence_id,
+        }),
         Broadcast(ServerMsg::Update(presence.clone())),
     ];
 }

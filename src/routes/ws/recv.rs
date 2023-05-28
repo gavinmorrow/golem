@@ -34,7 +34,10 @@ pub(super) async fn recv_ws(
 
         let msg = BroadcastMsg {
             target: broadcast_msg::Target::One(id),
-            content: super::ServerMsg::Authenticate { success: true },
+            content: super::ServerMsg::Authenticate {
+                success: true,
+                presence_id: presence.id.to_string(),
+            },
         };
 
         if let Err(err) = tx.send(msg) {

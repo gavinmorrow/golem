@@ -132,7 +132,7 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, presence: Presence, tx: 
 
 #[derive(Clone, Debug, serde::Serialize)]
 pub enum ServerMsg {
-    Authenticate { success: bool },
+    Authenticate { success: bool, presence_id: String },
     NewMessage(Message),
     Error,
     Messages(Vec<Message>),
