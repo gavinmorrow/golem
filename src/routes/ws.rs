@@ -137,7 +137,6 @@ pub enum ServerMsg {
     Error,
     Messages(Vec<Message>),
     Duplicate(String),
-    Unauthenticated,
     Join(User),
 }
 
