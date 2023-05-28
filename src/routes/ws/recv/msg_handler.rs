@@ -26,7 +26,6 @@ pub(super) async fn handle_message(
     state: Arc<AppState>,
 ) -> Option<Response> {
     Some(match msg {
-        ClientMsg::AuthenticateToken(token) => authenticate_token(&state, token, presence).await,
         ClientMsg::Authenticate(user) => authenticate(&state, user, presence).await,
         ClientMsg::Pong => return None,
         ClientMsg::Message(send_message) => {
@@ -36,29 +35,6 @@ pub(super) async fn handle_message(
         ClientMsg::LoadMessages { before, amount } => load_messages(&state, before, amount).await,
         ClientMsg::LoadChildren { parent, depth } => load_children(state, parent, depth).await,
     })
-}
-
-async fn authenticate_token(
-    state: &Arc<AppState>,
-    token: crate::model::session::Token,
-    presence: &mut Presence,
-) -> Response {
-    trace!("Authenticating user from token");
-
-    let database = state.database.lock().await;
-    let Ok(session_db) = auth::verify_session(token, database) else {
-        // Client sent invalid token
-        return vec![Reply(ServerMsg::Authenticate { success: false })];
-    };
-
-    let user_id = session_db.user_id.clone();
-    presence.session = Some(session_db);
-    // TODO: set name in presence
-
-    // Don't need to drop database here because it was moved into the auth::verify_session function
-    // and is dropped there.
-
-    finish_authentication(state, user_id).await
 }
 
 async fn authenticate(
