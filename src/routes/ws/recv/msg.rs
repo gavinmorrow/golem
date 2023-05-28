@@ -33,6 +33,7 @@ pub enum ClientMsg {
         parent: crate::model::message::Id,
         depth: u8,
     },
+    ChangeName(String),
 }
 
 impl ClientMsg {

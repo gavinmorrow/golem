@@ -15,7 +15,7 @@ use tokio::sync::broadcast;
 
 use crate::{
     auth,
-    model::{AppState, Message, Session, User},
+    model::{AppState, Message, Session},
     routes::ws::broadcast_handler::broadcast_handler,
 };
 
@@ -137,7 +137,9 @@ pub enum ServerMsg {
     Error,
     Messages(Vec<Message>),
     Duplicate(String),
-    Join(User),
+    Join(Presence),
+    Leave(Presence),
+    Update(Presence),
 }
 
 impl Into<String> for ServerMsg {

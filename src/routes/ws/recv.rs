@@ -44,6 +44,16 @@ pub(super) async fn recv_ws(
         debug!("Client {} is not authenticated", id);
     }
 
+    // Send join message
+    let msg = BroadcastMsg {
+        target: broadcast_msg::Target::All,
+        content: super::ServerMsg::Join(presence.clone()),
+    };
+
+    if let Err(err) = tx.send(msg) {
+        debug!("Failed to send join message: {}", err);
+    }
+
     while let Some(Ok(msg)) = receiver.next().await {
         if let ws::Message::Close(_) = msg {
             // client closing
@@ -99,4 +109,16 @@ pub(super) async fn recv_ws(
             None => continue,
         }
     }
+
+    // Send leave message
+    let msg = BroadcastMsg {
+        target: broadcast_msg::Target::All,
+        content: super::ServerMsg::Leave(presence),
+    };
+
+    if let Err(err) = tx.send(msg) {
+        debug!("Failed to send leave message: {}", err);
+    }
+
+    debug!("Client {} disconnected", id);
 }

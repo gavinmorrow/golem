@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::vec;
 
 use log::{debug, error, trace};
 
@@ -34,6 +35,7 @@ pub(super) async fn handle_message(
         ClientMsg::LoadAllMessages => load_all_messages(&state).await,
         ClientMsg::LoadMessages { before, amount } => load_messages(&state, before, amount).await,
         ClientMsg::LoadChildren { parent, depth } => load_children(state, parent, depth).await,
+        ClientMsg::ChangeName(name) => change_name(&state, presence, name).await,
     })
 }
 
@@ -63,43 +65,13 @@ async fn authenticate(
         return vec![Reply(ServerMsg::Authenticate { success: false })];
     }
 
-    let user_id = user_db.id.clone();
     presence.session = Some(Session::generate(state.next_snowflake(), user_db.id));
     presence.name = user.name;
 
-    drop(database); // Prevent deadlock
-
-    finish_authentication(state, user_id).await
-}
-
-/// Finish authentication once the session has been created and set
-/// by sending the user's data to the client and broadcasting their presence.
-///
-/// # Deadlock
-///
-/// Deadlocks can occur if the database is locked when this function is called.
-async fn finish_authentication(state: &Arc<AppState>, user_id: crate::model::user::Id) -> Response {
-    // resolve user
-    let mut user = match state.database.lock().await.get_user(&user_id) {
-        Ok(Some(user)) => user,
-        Ok(None) => {
-            error!("User {:?} not found in database.", user_id);
-            return vec![Reply(ServerMsg::Authenticate { success: false })];
-        }
-        Err(err) => {
-            error!("Failed to get user from database: {}", err);
-            return vec![Reply(ServerMsg::Error)];
-        }
-    };
-
-    debug!("Finished authentication for user {:?}", user_id);
-
-    user.password = String::new(); // Don't send password to client
-
-    vec![
+    return vec![
         Reply(ServerMsg::Authenticate { success: true }),
-        Broadcast(ServerMsg::Join(user)),
-    ]
+        Broadcast(ServerMsg::Update(presence.clone())),
+    ];
 }
 
 async fn message(
@@ -176,4 +148,12 @@ async fn load_children(state: Arc<AppState>, parent: Snowflake, depth: u8) -> Re
             vec![Reply(ServerMsg::Error)]
         }
     }
+}
+
+async fn change_name(_state: &AppState, presence: &mut Presence, name: String) -> Response {
+    presence.name = name;
+
+    vec![Reply(ServerMsg::Update(presence.clone()))];
+
+    todo!();
 }

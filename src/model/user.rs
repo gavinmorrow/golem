@@ -10,5 +10,6 @@ pub struct User {
     #[serde_as(as = "DisplayFromStr")]
     pub id: Id,
     pub name: String,
+    #[serde(skip)] // Don't expose (hashed) password to client
     pub password: String,
 }
