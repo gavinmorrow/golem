@@ -5,9 +5,10 @@ use super::Snowflake;
 pub type Id = Snowflake;
 pub type Token = i64;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize)]
 pub struct Session {
     pub id: Id,
+    #[serde(skip)] // Don't expose token to client
     pub token: Token,
     pub user_id: super::user::Id,
 }

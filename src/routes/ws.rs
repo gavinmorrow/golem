@@ -15,14 +15,15 @@ use tokio::sync::broadcast;
 
 use crate::{
     auth,
-    model::{AppState, Message, Session, User},
+    model::{AppState, Message, Session},
     routes::ws::broadcast_handler::broadcast_handler,
 };
 
-use self::{broadcast_msg::BroadcastMsg, state::WsState};
+use self::{broadcast_msg::BroadcastMsg, presence::Presence, state::WsState};
 
 mod broadcast_handler;
 mod broadcast_msg;
+mod presence;
 mod recv;
 mod state;
 
@@ -73,9 +74,27 @@ async fn handler(
         }
     };
 
+    // Attempt to resolve name
+    let database = state.appstate.database.lock().await;
+    // FIXME: This feels unnecessarily complicated
+    let name = if let Some(session) = &session {
+        database
+            .get_user_name(&session.user_id)
+            .unwrap_or(Some("Anonymous".to_string()))
+            .unwrap_or("Anonymous".to_string())
+    } else {
+        "Anonymous".to_string()
+    };
+
+    let presence = Presence {
+        id: state.appstate.next_snowflake(),
+        session: session,
+        name,
+    };
+
     let appstate = state.appstate.clone();
     let tx = state.tx.clone();
-    ws.on_upgrade(move |ws| handle_ws(ws, appstate, session, tx))
+    ws.on_upgrade(move |ws| handle_ws(ws, appstate, presence, tx))
 }
 
 // Naming note (for types and variables):
@@ -86,7 +105,7 @@ async fn handler(
 // - Use `message` when you're referring to a
 //   message in the database/chat
 
-async fn handle_ws(ws: WebSocket, state: Arc<AppState>, session: Option<Session>, tx: Sender) {
+async fn handle_ws(ws: WebSocket, state: Arc<AppState>, presence: Presence, tx: Sender) {
     trace!("ws connection opened");
 
     let id = state.next_snowflake().id();
@@ -100,7 +119,7 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, session: Option<Session>
 
     let tx = tx.clone();
 
-    let mut recv_task = tokio::spawn(recv::recv_ws(receiver, session, state, id, tx));
+    let mut recv_task = tokio::spawn(recv::recv_ws(receiver, presence, state, id, tx));
 
     // If any one of the tasks run to completion, we abort the other.
     tokio::select! {
@@ -118,8 +137,9 @@ pub enum ServerMsg {
     Error,
     Messages(Vec<Message>),
     Duplicate(String),
-    Unauthenticated,
-    Join(User),
+    Join(Presence),
+    Leave(Presence),
+    Update(Presence),
 }
 
 impl Into<String> for ServerMsg {

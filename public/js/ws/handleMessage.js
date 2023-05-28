@@ -15,6 +15,12 @@ function handleMessage(message) {
 		case "Join":
 			handleJoin(message);
 			break;
+		case "Leave":
+			handleLeave(message);
+			break;
+		case "Update":
+			handleUpdate(message);
+			break;
 		case "Error":
 			handleError(message);
 			break;
@@ -69,7 +75,26 @@ function handleJoin(message) {
 	const name = message.Join.name;
 	const elem = document.createElement("div");
 	elem.textContent = name;
+	elem.setAttribute("data-presence-id", message.Join.id);
 	nickList.appendChild(elem);
+}
+
+function handleLeave(message) {
+	console.log("Someone left!", message.Leave);
+
+	// Remove from nick list
+	const id = message.Leave.id;
+	const elem = nickList.querySelector(`[data-presence-id="${id}"]`);
+	elem.remove();
+}
+
+function handleUpdate(message) {
+	console.log("Update:", message.Update);
+
+	// Update nick list
+	const id = message.Update.id;
+	const elem = nickList.querySelector(`[data-presence-id="${id}"]`);
+	elem.textContent = message.Update.name;
 }
 
 function makeMessageElem(message) {

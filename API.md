@@ -19,7 +19,6 @@ This document describes the Golem API. Note that the API is still in development
 
 | Message                   | Description                                     |
 | ------------------------- | ----------------------------------------------- |
-| AuthenticateToken(u64)    | Authenticate with a token.                      |
 | Authenticate(PartialUser) | Authenticate with the required parts of a user. |
 | Message(SendMessage)      | Send a message.                                 |
 | LoadAllMessages           | Load all messages.                              |

@@ -21,7 +21,6 @@ pub struct PartialUser {
 
 #[derive(Clone, Debug, serde::Deserialize)]
 pub enum ClientMsg {
-    AuthenticateToken(crate::model::session::Token),
     Authenticate(PartialUser),
     Pong,
     Message(SendMessage),
@@ -34,6 +33,7 @@ pub enum ClientMsg {
         parent: crate::model::message::Id,
         depth: u8,
     },
+    ChangeName(String),
 }
 
 impl ClientMsg {
