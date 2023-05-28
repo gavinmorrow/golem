@@ -1,6 +1,6 @@
 import ChatMessage, { messageForm } from "../custom-elements/ChatMessage.js";
 
-const joined = [];
+let joined = [];
 const nickList = document.getElementById("nick-list");
 
 function handleMessage(message) {
@@ -97,8 +97,9 @@ function handleLeave(message) {
 function handleUpdate(message) {
 	console.log("Update:", message.Update);
 
-	joined.map(j => {
+	joined = joined.map(j => {
 		if (j.id === message.Update.id) {
+			console.log("Updating:", j, message.Update);
 			return message.Update;
 		}
 		return j;
