@@ -1,5 +1,8 @@
 import ChatMessage, { messageForm } from "../custom-elements/ChatMessage.js";
 
+const joined = [];
+const nickList = document.getElementById("nick-list");
+
 function handleMessage(message) {
 	console.log("Got message:", message);
 	switch (Object.keys(message)[0]) {
@@ -33,11 +36,16 @@ function handleAuthenticate(message) {
 	if (message.Authenticate.success) {
 		console.log("Successfully authenticated!");
 
-		// Delete the login button (already logged in)
-		document.getElementById("show-login").remove();
+		// Disable the login button (already logged in)
+		document.getElementById("show-login").setAttribute("disabled", "");
 
 		// Show send message form
 		messageForm.style.display = "block";
+
+		// Update change name form
+		document.getElementById("new-name").value = joined.filter(
+			j => j.id === message.Authenticate.presence_id
+		)[0].name;
 	} else {
 		console.error("Failed to authenticate:", message.Authenticate.error);
 	}
@@ -58,14 +66,10 @@ function handleMessages(message) {
 	const messages = message.Messages;
 
 	// Add to DOM
-
 	for (const message of messages.reverse()) {
 		makeMessageElem(message).insert();
 	}
 }
-
-const joined = [];
-const nickList = document.getElementById("nick-list");
 
 function handleJoin(message) {
 	console.log("Someone joined!", message.Join);
@@ -82,6 +86,8 @@ function handleJoin(message) {
 function handleLeave(message) {
 	console.log("Someone left!", message.Leave);
 
+	joined.filter(j => j.id !== message.Leave.id);
+
 	// Remove from nick list
 	const id = message.Leave.id;
 	const elem = nickList.querySelector(`[data-presence-id="${id}"]`);
@@ -90,6 +96,13 @@ function handleLeave(message) {
 
 function handleUpdate(message) {
 	console.log("Update:", message.Update);
+
+	joined.map(j => {
+		if (j.id === message.Update.id) {
+			return message.Update;
+		}
+		return j;
+	});
 
 	// Update nick list
 	const id = message.Update.id;

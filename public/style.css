@@ -25,8 +25,12 @@
 		align-items: center;
 	}
 
-	#nav > h1 {
+	#nav h1 {
 		display: inline;
 		margin: 0;
+	}
+
+	#nav img {
+		height: calc(1rem + var(--padding-medium) * 2 + var(--padding-small) * 2);
 	}
 }

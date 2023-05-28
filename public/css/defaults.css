@@ -131,6 +131,7 @@
 	input:is([type="button"], [type="submit"], [type="reset"]) {
 		--color-bg: var(--color-bg-button);
 		background-color: var(--color-bg);
+		color: var(--color-text);
 
 		border-color: var(--color-bg);
 		border-width: var(--border-width);

@@ -15,6 +15,24 @@ document.getElementById("show-login").addEventListener("click", () => {
 	document.getElementById("login-dialog").showModal();
 });
 
+document.getElementById("show-change-name").addEventListener("click", () => {
+	document.getElementById("change-name-dialog").showModal();
+});
+
+document.getElementById("change-name-form").addEventListener("submit", event => {
+	event.preventDefault();
+
+	const name = document.getElementById("new-name").value;
+
+	ws.send(
+		JSON.stringify({
+			ChangeName: name,
+		})
+	);
+
+	document.getElementById("change-name-dialog").close();
+});
+
 messageForm.addEventListener("submit", event => {
 	event.preventDefault();
 	const content = messageForm.querySelector("#msg-input").value;

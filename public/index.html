@@ -13,8 +13,14 @@
 		<noscript>You must enable JavaScript to view this page.</noscript>
 		<div id="wrapper">
 			<nav id="nav">
-				<h1>Golem</h1>
-				<button id="show-login">Login</button>
+				<div>
+					<img src="/images/favicon.svg" alt="Icon" />
+					<h1>Golem</h1>
+				</div>
+				<div>
+					<button id="show-change-name">Change Name</button>
+					<button id="show-login">Login</button>
+				</div>
 			</nav>
 			<main>
 				<div id="chat" role="region" aria-label="Chat">
@@ -43,6 +49,13 @@
 				<input id="password" type="password" />
 				<br />
 				<input type="submit" value="Login" id="login-btn" />
+			</form>
+		</dialog>
+		<dialog id="change-name-dialog">
+			<form id="change-name-form">
+				<label for="new-name">Name:</label>
+				<input id="new-name" type="text" value="Anonymous" />
+				<input type="submit" value="Change" />
 			</form>
 		</dialog>
 		<script src="script.js" type="module"></script>
