@@ -21,13 +21,16 @@
 		grid-area: nav;
 
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
+		gap: var(--padding-small);
 	}
 
 	#nav h1 {
 		display: inline;
 		margin: 0;
+		flex-grow: 1; /* Make the title take up all the space it can
+		               * (also has the effect of pushing the buttons to the right)
+		               */
 	}
 
 	#nav img {
