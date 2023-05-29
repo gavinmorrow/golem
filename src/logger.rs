@@ -27,7 +27,7 @@ pub fn init() {
         // Only info from dependencies
         .level(LevelFilter::Info)
         // But everything for this crate (golem)
-        .level_for("golem", LevelFilter::Trace)
+        .level_for("golem", LevelFilter::Debug)
         .chain(std::io::stdout())
         .apply()
         .expect("logger should initialize");
