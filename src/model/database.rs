@@ -203,21 +203,13 @@ impl Database {
     pub fn add_message(&self, message: &Message) -> SqlResult<()> {
         debug!("Adding message {} to database", message.id.id());
 
-        // TODO: make a proper room system
-        // For now, an id of 0 means it is in the main room
-        // As rooms aren't implemented yet, we just set the parent to None
-        let parent = match message.parent.id() {
-            0 => None,
-            id => Some(id),
-        };
-
         self.conn.execute(
             "INSERT INTO messages (id, author, author_name, parent, content) VALUES (?1, ?2, ?3, ?4, ?5)",
             (
                 message.id.id(),
                 message.author.id(),
                 message.author_name.as_str(),
-                parent,
+                message.parent.id(),
                 <String as AsRef<str>>::as_ref(&message.content),
             ),
         )?;
