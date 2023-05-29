@@ -1,5 +1,5 @@
 use super::{Message, Session, Snowflake, User};
-use log::{debug, trace};
+use log::{debug, trace, info};
 use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult, Row};
 
 type Result<T> = SqlResult<Option<T>>;
@@ -53,7 +53,7 @@ impl Database {
             (),
         )?;
 
-        trace!("Finished initialized database");
+        info!("Finished initialized database");
 
         Ok(conn)
     }
