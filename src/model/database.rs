@@ -1,5 +1,5 @@
 use super::{Message, Session, Snowflake, User};
-use log::{debug, trace, info};
+use log::{debug, info, trace};
 use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult, Row};
 
 type Result<T> = SqlResult<Option<T>>;
@@ -49,6 +49,14 @@ impl Database {
                 token   INT NOT NULL,
                 user    INT NOT NULL,
                 FOREIGN KEY(user) REFERENCES users(id)
+            )",
+            (),
+        )?;
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS rooms (d
+                id   INT PRIMARY KEY,
+                name TEXT NOT NULL
             )",
             (),
         )?;
