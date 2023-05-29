@@ -1,17 +1,12 @@
 use super::{user, Snowflake};
-use serde_with::DisplayFromStr;
 
 pub type Id = Snowflake;
 
-#[serde_with::serde_as]
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Message {
-    #[serde_as(as = "DisplayFromStr")]
     pub id: Id,
-    #[serde_as(as = "DisplayFromStr")]
     pub author: user::Id,
     pub author_name: String,
-    #[serde_as(as = "DisplayFromStr")]
     pub parent: Id,
     pub content: String,
 }
