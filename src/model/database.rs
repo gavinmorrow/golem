@@ -222,21 +222,18 @@ impl Database {
     fn map_message(&self, row: &Row) -> SqlResult<Message> {
         trace!("Mapping db row to message");
 
-        // See `add_message` for why this is done
-        let parent = match self.get_snowflake_column_optional(row, 3) {
-            Some(id) => id,
-            None => Snowflake::try_from(0).expect("0 (hardcoded) is a valid snowflake"),
-        };
-
+        let id = self.get_snowflake_column(row, 0);
         let author = self.get_snowflake_column(row, 1);
         let author_name = self.get_column(row, 2);
+        let parent = self.get_snowflake_column(row, 3);
+        let content = self.get_column(row, 4);
 
         Ok(Message {
-            id: self.get_snowflake_column(row, 0),
+            id,
             author,
             author_name,
             parent,
-            content: self.get_column(row, 4),
+            content,
         })
     }
 }
