@@ -36,9 +36,8 @@ impl Database {
                 id          INT PRIMARY KEY,
                 author      INT NOT NULL,
                 author_name TEXT NOT NULL,
-                parent      INT,
+                parent      INT NOT NULL,
                 content     TEXT NOT NULL,
-                FOREIGN KEY(parent) REFERENCES messages(id)
             )",
             (),
         )?;
