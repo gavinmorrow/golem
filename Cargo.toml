@@ -16,9 +16,8 @@ log = "0.4.17"
 rand = "0.8.5"
 rand_core = { version = "0.6.4", features = ["getrandom"] }
 rusqlite = { version = "0.29.0", features = ["bundled"] }
-serde = "1.0.163"
+serde = { version = "1.0.163", features = ["derive"] }
 serde_json = "1.0.96"
-serde_with = "3.0.0"
 snowcloud = { version = "0.2.0", features = ["serde"] }
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.4.0", features = ["fs"] }
