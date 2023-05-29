@@ -210,7 +210,7 @@ impl Database {
                 message.author.id(),
                 message.author_name.as_str(),
                 message.parent.id(),
-                <String as AsRef<str>>::as_ref(&message.content),
+                message.content.as_str(),
             ),
         )?;
 
