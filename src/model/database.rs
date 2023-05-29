@@ -1,6 +1,7 @@
-use super::{Message, Session, Snowflake, User};
+use super::{Message, Room, Session, Snowflake, User};
 use log::{debug, info, trace};
 use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult, Row};
+use serde::__private::de;
 
 type Result<T> = SqlResult<Option<T>>;
 
@@ -235,6 +236,36 @@ impl Database {
             parent,
             content,
         })
+    }
+}
+
+/// Room stuff
+impl Database {
+    pub fn add_room(&self, room: &Room) -> SqlResult<()> {
+        debug!("Adding room {} to database", room.id.id());
+
+        self.conn.execute(
+            "INSERT INTO rooms (id, name) VALUES (?1, ?2)",
+            (room.id.id(), room.name.as_str()),
+        )?;
+
+        debug!("Added room {} to database", room.id);
+        info!("Created room {}: {}", room.id, room.name);
+
+        Ok(())
+    }
+
+    pub fn get_room(&self, id: crate::model::room::Id) -> Result<Room> {
+        debug!("Getting room {} from database", id);
+
+        self.conn
+            .query_row("SELECT * FROM rooms WHERE id=?1", (id.id(),), |row| {
+                Ok(Room {
+                    id: self.get_snowflake_column(row, 0),
+                    name: self.get_column(row, 1),
+                })
+            })
+            .optional()
     }
 }
 
