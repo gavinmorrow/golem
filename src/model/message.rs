@@ -7,7 +7,8 @@ pub struct Message {
     pub id: Id,
     pub author: user::Id,
     pub author_name: String,
-    pub parent: Id,
+    pub parent: Id, /* The way that Golem expresses a top level message is
+                     * by making the parent of said message the room id. */
     pub content: String,
 }
 
