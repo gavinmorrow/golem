@@ -25,6 +25,7 @@ pub(super) async fn recv_ws(
     state: Arc<AppState>,
     id: i64,
     tx: broadcast::Sender<Broadcast>,
+    room_id: crate::model::room::Id,
 ) {
     let mut dedup_ids = Vec::new();
 
@@ -79,8 +80,14 @@ pub(super) async fn recv_ws(
 
         debug!("received message: {:?}", msg);
 
-        let msg_responses =
-            msg_handler::handle_message(msg, &mut presence, &mut dedup_ids, state.clone()).await;
+        let msg_responses = msg_handler::handle_message(
+            msg,
+            &mut presence,
+            &mut dedup_ids,
+            state.clone(),
+            &room_id,
+        )
+        .await;
 
         match msg_responses {
             Some(msg_responses) => {

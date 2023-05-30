@@ -1,7 +1,6 @@
 use super::{Message, Room, Session, Snowflake, User};
 use log::{debug, info, trace};
 use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult, Row};
-use serde::__private::de;
 
 type Result<T> = SqlResult<Option<T>>;
 
@@ -38,7 +37,7 @@ impl Database {
                 author      INT NOT NULL,
                 author_name TEXT NOT NULL,
                 parent      INT NOT NULL,
-                content     TEXT NOT NULL,
+                content     TEXT NOT NULL
             )",
             (),
         )?;
@@ -54,14 +53,14 @@ impl Database {
         )?;
 
         conn.execute(
-            "CREATE TABLE IF NOT EXISTS rooms (d
+            "CREATE TABLE IF NOT EXISTS rooms (
                 id   INT PRIMARY KEY,
                 name TEXT NOT NULL
             )",
             (),
         )?;
 
-        info!("Finished initialized database");
+        info!("Finished initializing database");
 
         Ok(conn)
     }
@@ -160,33 +159,24 @@ impl Database {
         messages
     }
 
-    pub fn get_children_of(
-        &self,
-        message: Option<&Snowflake>,
-        depth: u8,
-    ) -> SqlResult<Vec<Message>> {
-        // Return an empty vector if the depth is 0
-        if depth == 0 {
-            return Ok(Vec::new());
-        }
-
+    pub fn get_children_of(&self, parent: Option<&Snowflake>) -> SqlResult<Vec<Message>> {
         // Start by getting only the direct children of the given message
         // Then, for each child, get the children of that child, and so on
-        // until we reach the given depth
+        // Until there are no more children
 
         let mut stmt = self
             .conn
             .prepare("SELECT * FROM messages WHERE parent=?1")?;
 
         let mut direct_children: Vec<Message> = stmt
-            .query_map((message.map(|id| id.id()),), |row| self.map_message(row))?
+            .query_map((parent.map(|id| id.id()),), |row| self.map_message(row))?
             // Safe b/c the values are all set to be `Ok` above
             .map(|msg| msg.unwrap())
             .collect();
 
         let mut children: Vec<Message> = direct_children
             .iter()
-            .map(|child| self.get_children_of(Some(&child.id), depth - 1))
+            .map(|child| self.get_children_of(Some(&child.id)))
             .flat_map(|result| match result {
                 Ok(vec) => vec.into_iter().map(|item| Ok(item)).collect(),
                 Err(er) => vec![Err(er)],

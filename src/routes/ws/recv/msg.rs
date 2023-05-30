@@ -28,7 +28,6 @@ pub enum ClientMsg {
     },
     LoadChildren {
         parent: crate::model::message::Id,
-        depth: u8,
     },
     ChangeName(String),
 }
