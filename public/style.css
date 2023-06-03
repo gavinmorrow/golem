@@ -1,4 +1,4 @@
-@import url("/css/defaults.css");
+@import url("/static/css/defaults.css");
 
 @layer component {
 	#chat {
