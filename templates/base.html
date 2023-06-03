@@ -10,13 +10,16 @@
 		{% endblock head %}
 	</head>
 	<body>
-		{%- block nav -%}
-		<nav id="nav">
-			<img src="/images/favicon.svg" alt="Icon" />
-			<h1>Golem</h1>
-			<button id="show-change-name">Change Name</button>
-			<button id="show-login">Login</button>
-		</nav>
-		{%- endblock nav -%}{%- block content %}{% endblock content -%}
+		<div id="wrapper">
+			{%- block nav -%}
+			<nav id="nav">
+				<img src="/images/favicon.svg" alt="Icon" />
+				<h1>Golem</h1>
+				<button id="show-change-name">Change Name</button>
+				<button id="show-login">Login</button>
+			</nav>
+			{%- endblock nav -%}{%- block content %} {% endblock content -%}
+		</div>
+		{% block body %} {% endblock body %}
 	</body>
 </html>
