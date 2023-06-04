@@ -7,18 +7,13 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>{% block title %}{% endblock title%} | Golem</title>
 		<link rel="stylesheet" href="/static/css/defaults.css" />
+		<link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
+		<link rel="icon" type="image/png" href="/static/images/favicon.png" />
 		{% endblock head %}
 	</head>
 	<body>
 		<div id="wrapper">
-			{%- block nav -%}
-			<nav id="nav">
-				<img src="/static/images/favicon.svg" alt="Icon" />
-				<h1>Golem</h1>
-				<button id="show-change-name">Change Name</button>
-				<button id="show-login">Login</button>
-			</nav>
-			{%- endblock nav -%}{%- block content %} {% endblock content -%}
+			{%- block nav -%}{%- endblock nav -%}{%- block content %} {% endblock content -%}
 		</div>
 		{% block body %} {% endblock body %}
 	</body>

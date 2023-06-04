@@ -38,7 +38,7 @@ async fn main() {
         .route("/api/register", post(routes::register::register))
         .route("/api/snowflake", get(routes::snowflake))
         .route("/api/snapshot", get(routes::messages::get_snapshot))
-        .nest_service("/", templates::router())
+        .nest_service("/", templates::router(state.clone().into()))
         .with_state(state.into());
 
     axum::Server::bind(&ROOT_PATH.parse().unwrap())

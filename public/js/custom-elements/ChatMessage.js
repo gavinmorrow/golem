@@ -33,7 +33,7 @@ class ChatMessage extends HTMLElement {
 
 		const style = document.createElement("style");
 		style.textContent = `
-		@import url("/css/defaults.css");
+		@import url("/static/css/defaults.css");
 
 		address, span {
 			margin-left: 0;
@@ -137,7 +137,7 @@ class TopLevelChatMessage extends ChatMessage {
 
 		const style = document.createElement("style");
 		style.textContent = `
-		@import url("/css/defaults.css");
+		@import url("/static/css/defaults.css");
 
 		chat-message, form {
 			margin-left: 0;

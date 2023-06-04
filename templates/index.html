@@ -1,3 +1,10 @@
 {% extends "base.html" %} {% block head %} {{ super() }}
 <link rel="stylesheet" href="/static/style.css" />
-{% endblock head %}
+{% endblock head %} {%- block nav -%}
+<nav id="nav">
+	<img src="/static/images/favicon.svg" alt="Icon" />
+	<h1>Golem</h1>
+	<button id="show-change-name">Change Name</button>
+	<button id="show-login">Login</button>
+</nav>
+{%- endblock nav -%}

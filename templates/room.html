@@ -1,0 +1,49 @@
+{% extends "base.html" %} {% block head %} {{ super() }}
+<link rel="stylesheet" href="/static/style.css" />
+<meta name="data-room-id" content="{{ room_id }}" />
+{% endblock head %} {%- block nav -%}
+<nav id="nav">
+	<img src="/static/images/favicon.svg" alt="Icon" />
+	<h1>{{ room_name }} Golem</h1>
+	<button id="show-change-name">Change Name</button>
+	<button id="show-login">Login</button>
+</nav>
+{%- endblock nav -%} {%- block content -%}
+<main>
+	<div id="chat" role="region" aria-label="Chat">
+		<form id="msg-form">
+			<input
+				id="msg-input-parent"
+				type="text"
+				placeholder="Parent ID"
+				style="display: none"
+			/>
+			<input id="msg-input" type="text" placeholder="Type a message..." />
+			<input type="submit" value="Send" id="send-btn" />
+		</form>
+	</div>
+</main>
+<aside id="nick-list">
+	<h2>People</h2>
+</aside>
+{%- endblock content -%} {%- block body -%}
+<dialog id="login-dialog">
+	<form id="login">
+		<label for="name">Username</label>
+		<input id="name" type="text" />
+		<br />
+		<label for="password">Password</label>
+		<input id="password" type="password" />
+		<br />
+		<input type="submit" value="Login" id="login-btn" />
+	</form>
+</dialog>
+<dialog id="change-name-dialog">
+	<form id="change-name-form">
+		<label for="new-name">Name:</label>
+		<input id="new-name" type="text" value="Anonymous" />
+		<input type="submit" value="Change" />
+	</form>
+</dialog>
+<script src="/static/script.js" type="module"></script>
+{%- endblock body -%}

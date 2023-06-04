@@ -4,6 +4,7 @@ use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResul
 
 type Result<T> = SqlResult<Option<T>>;
 
+#[derive(Debug)]
 pub struct Database {
     conn: Connection,
 }
@@ -22,6 +23,15 @@ impl Database {
         trace!("Opened database connection.");
         trace!("Initializing database...");
 
+        Database::init_tables(&conn)?;
+        Database::init_main_room(&conn)?;
+
+        info!("Finished initializing database");
+
+        Ok(conn)
+    }
+
+    fn init_tables(conn: &Connection) -> SqlResult<()> {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS users (
                 id   INT PRIMARY KEY,
@@ -60,9 +70,16 @@ impl Database {
             (),
         )?;
 
-        info!("Finished initializing database");
+        Ok(())
+    }
 
-        Ok(conn)
+    fn init_main_room(conn: &Connection) -> SqlResult<()> {
+        conn.execute(
+            "INSERT OR IGNORE INTO rooms (id, name) VALUES (0, 'main')",
+            (),
+        )?;
+
+        Ok(())
     }
 }
 
@@ -250,6 +267,19 @@ impl Database {
 
         self.conn
             .query_row("SELECT * FROM rooms WHERE id=?1", (id.id(),), |row| {
+                Ok(Room {
+                    id: self.get_snowflake_column(row, 0),
+                    name: self.get_column(row, 1),
+                })
+            })
+            .optional()
+    }
+
+    pub fn get_room_by_name(&self, name: &String) -> Result<Room> {
+        debug!("Getting room {} from database by name", name);
+
+        self.conn
+            .query_row("SELECT * FROM rooms WHERE name=?1", (name,), |row| {
                 Ok(Room {
                     id: self.get_snowflake_column(row, 0),
                     name: self.get_column(row, 1),
