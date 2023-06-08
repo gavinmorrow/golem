@@ -63,10 +63,16 @@ function handleNewMessage(message) {
 function handleMessages(message) {
 	console.log("Messages:", message.Messages);
 
-	const messages = message.Messages;
+	const messages = message.Messages.sort((a, b) => {
+		a = BigInt(a.id);
+		b = BigInt(b.id);
+		if (a < b) return -1;
+		if (a > b) return 1;
+		return 0;
+	});
 
 	// Add to DOM
-	for (const message of messages.reverse()) {
+	for (const message of messages) {
 		makeMessageElem(message).insert();
 	}
 }

@@ -2,7 +2,7 @@ use super::{user, Snowflake};
 
 pub type Id = Snowflake;
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, Eq)]
 pub struct Message {
     pub id: Id,
     pub author: user::Id,
@@ -17,8 +17,6 @@ impl PartialEq for Message {
         self.id == other.id
     }
 }
-
-impl Eq for Message {}
 
 impl PartialOrd for Message {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {

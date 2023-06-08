@@ -8,7 +8,7 @@ use axum_macros::debug_handler;
 use tera::{Context, Tera};
 use tower_http::services::ServeDir;
 
-use crate::model::{AppState, Snowflake};
+use crate::model::AppState;
 
 #[derive(Clone)]
 struct TemplateState {
@@ -38,7 +38,7 @@ pub fn router(appstate: AppState) -> Router {
 
 #[debug_handler]
 async fn index(State(state): State<TemplateState>) -> Html<String> {
-    let mut context = Context::new();
+    let context = Context::new();
     let rendered = state.templates.render("base.html", &context).unwrap();
     Html(rendered)
 }

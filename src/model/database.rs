@@ -12,27 +12,16 @@ pub struct Database {
 /// Build the database.
 impl Database {
     pub fn build() -> SqlResult<Database> {
-        let conn = Database::init_db()?;
+        let conn = Connection::open("./db.sqlite3")?;
         let db = Database { conn };
+        db.init_tables()?;
+        db.init_main_room()?;
         Ok(db)
     }
 
-    fn init_db() -> SqlResult<Connection> {
-        let conn = Connection::open("./db.sqlite3")?;
-
-        trace!("Opened database connection.");
-        trace!("Initializing database...");
-
-        Database::init_tables(&conn)?;
-        Database::init_main_room(&conn)?;
-
-        info!("Finished initializing database");
-
-        Ok(conn)
-    }
-
-    fn init_tables(conn: &Connection) -> SqlResult<()> {
-        conn.execute(
+    fn init_tables(&self) -> SqlResult<()> {
+        trace!("Initializing database tables...");
+        self.conn.execute(
             "CREATE TABLE IF NOT EXISTS users (
                 id   INT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -41,7 +30,7 @@ impl Database {
             (),
         )?;
 
-        conn.execute(
+        self.conn.execute(
             "CREATE TABLE IF NOT EXISTS messages (
                 id          INT PRIMARY KEY,
                 author      INT NOT NULL,
@@ -52,7 +41,7 @@ impl Database {
             (),
         )?;
 
-        conn.execute(
+        self.conn.execute(
             "CREATE TABLE IF NOT EXISTS sessions (
                 id      INT PRIMARY KEY,
                 token   INT NOT NULL,
@@ -62,7 +51,7 @@ impl Database {
             (),
         )?;
 
-        conn.execute(
+        self.conn.execute(
             "CREATE TABLE IF NOT EXISTS rooms (
                 id   INT PRIMARY KEY,
                 name TEXT NOT NULL
@@ -70,15 +59,17 @@ impl Database {
             (),
         )?;
 
+        trace!("Finished initializing database tables.");
+
         Ok(())
     }
 
-    fn init_main_room(conn: &Connection) -> SqlResult<()> {
-        conn.execute(
+    fn init_main_room(&self) -> SqlResult<()> {
+        self.conn.execute(
             "INSERT OR IGNORE INTO rooms (id, name) VALUES (0, 'main')",
             (),
         )?;
-
+        info!("Created main room.");
         Ok(())
     }
 }
