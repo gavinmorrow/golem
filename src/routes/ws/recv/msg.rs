@@ -10,10 +10,20 @@ pub struct SendMessage {
     pub dedup_id: Option<String>,
 }
 
-#[derive(Clone, Debug, serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 pub struct PartialUser {
     pub name: String,
+    /// The (**unhashed**) password
     pub password: String,
+}
+
+impl core::fmt::Debug for PartialUser {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Don't print the password
+        f.debug_struct("PartialUser")
+            .field("name", &self.name)
+            .finish()
+    }
 }
 
 #[derive(Clone, Debug, serde::Deserialize)]
