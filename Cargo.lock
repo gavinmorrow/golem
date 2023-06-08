@@ -1245,9 +1245,9 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
 name = "snowcloud"
-version = "0.2.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8ef94f3f5ddd8600cfad1e6a8e6ecf69814a8b29e5291a698baf7935b918a06"
+checksum = "31f28d27491f1d39921ac40a4a64fb317b00d31b160475b63f2cbc3cb9c9b554"
 dependencies = [
  "serde",
 ]
