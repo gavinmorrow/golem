@@ -25,6 +25,7 @@ pub(super) async fn handle_message(
     presence: &mut Presence,
     mut dedup_ids: &mut Vec<Option<String>>,
     state: Arc<AppState>,
+    room_id: &crate::model::room::Id,
 ) -> Option<Response> {
     Some(match msg {
         ClientMsg::Authenticate(user) => authenticate(&state, user, presence).await,
@@ -32,9 +33,9 @@ pub(super) async fn handle_message(
         ClientMsg::Message(send_message) => {
             message(&state, presence.clone(), &mut dedup_ids, send_message).await
         }
-        ClientMsg::LoadAllMessages => load_all_messages(&state).await,
+        ClientMsg::LoadAllMessages => load_all_messages(&state, room_id).await,
         ClientMsg::LoadMessages { before, amount } => load_messages(&state, before, amount).await,
-        ClientMsg::LoadChildren { parent, depth } => load_children(state, parent, depth).await,
+        ClientMsg::LoadChildren { parent } => load_children(state, parent).await,
         ClientMsg::ChangeName(name) => change_name(&state, presence, name).await,
     })
 }
@@ -127,10 +128,10 @@ async fn message(
     }
 }
 
-async fn load_all_messages(state: &Arc<AppState>) -> Response {
+async fn load_all_messages(state: &Arc<AppState>, room_id: &crate::model::room::Id) -> Response {
     trace!("Loading all messages");
     let database = state.database.lock().await;
-    match database.get_messages() {
+    match database.get_children_of(Some(room_id)) {
         Ok(messages) => vec![Reply(ServerMsg::Messages(messages))],
         Err(err) => {
             error!("Failed to get messages from database: {:?}", err);
@@ -150,9 +151,9 @@ async fn load_messages(state: &Arc<AppState>, before: Option<Snowflake>, amount:
     }
 }
 
-async fn load_children(state: Arc<AppState>, parent: Snowflake, depth: u8) -> Response {
+async fn load_children(state: Arc<AppState>, parent: Snowflake) -> Response {
     let database = state.database.lock().await;
-    match database.get_children_of(Some(&parent), depth) {
+    match database.get_children_of(Some(&parent)) {
         Ok(messages) => vec![Reply(ServerMsg::Messages(messages))],
         Err(err) => {
             error!("Failed to get messages from database: {:?}", err);

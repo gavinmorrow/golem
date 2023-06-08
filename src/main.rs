@@ -5,12 +5,12 @@ use axum::{
 };
 use log::info;
 use model::AppState;
-use tower_http::services::ServeDir;
 
 mod auth;
 mod logger;
 mod model;
 mod routes;
+mod templates;
 
 type Snowcloud = snowcloud::MultiThread<43, 8, 12>;
 const EPOCH: u64 = 1650667342;
@@ -38,7 +38,7 @@ async fn main() {
         .route("/api/register", post(routes::register::register))
         .route("/api/snowflake", get(routes::snowflake))
         .route("/api/snapshot", get(routes::messages::get_snapshot))
-        .nest_service("/", ServeDir::new("public"))
+        .nest_service("/", templates::router(state.clone().into()))
         .with_state(state.into());
 
     axum::Server::bind(&ROOT_PATH.parse().unwrap())

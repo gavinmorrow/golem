@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{ws::WebSocket, State, WebSocketUpgrade},
+    extract::{ws::WebSocket, Path, State, WebSocketUpgrade},
     headers::Cookie,
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -38,13 +38,14 @@ pub fn router(state: Arc<AppState>) -> Router<Arc<AppState>> {
     });
 
     Router::<Arc<WsState>>::new()
-        .route("/", get(handler))
+        .route("/:room_id", get(handler))
         .with_state(state)
 }
 
 #[debug_handler]
 async fn handler(
     TypedHeader(cookies): TypedHeader<Cookie>,
+    Path(room_id): Path<crate::model::room::Id>,
     ws: WebSocketUpgrade,
     State(state): State<Arc<WsState>>,
 ) -> Response {
@@ -94,7 +95,7 @@ async fn handler(
 
     let appstate = state.appstate.clone();
     let tx = state.tx.clone();
-    ws.on_upgrade(move |ws| handle_ws(ws, appstate, presence, tx))
+    ws.on_upgrade(move |ws| handle_ws(ws, appstate, presence, tx, room_id))
 }
 
 // Naming note (for types and variables):
@@ -105,7 +106,7 @@ async fn handler(
 // - Use `message` when you're referring to a
 //   message in the database/chat
 
-async fn handle_ws(ws: WebSocket, state: Arc<AppState>, presence: Presence, tx: Sender) {
+async fn handle_ws(ws: WebSocket, state: Arc<AppState>, presence: Presence, tx: Sender, room_id: crate::model::room::Id) {
     trace!("ws connection opened");
 
     let id = state.next_snowflake().id();
@@ -119,7 +120,7 @@ async fn handle_ws(ws: WebSocket, state: Arc<AppState>, presence: Presence, tx: 
 
     let tx = tx.clone();
 
-    let mut recv_task = tokio::spawn(recv::recv_ws(receiver, presence, state, id, tx));
+    let mut recv_task = tokio::spawn(recv::recv_ws(receiver, presence, state, id, tx, room_id));
 
     // If any one of the tasks run to completion, we abort the other.
     tokio::select! {

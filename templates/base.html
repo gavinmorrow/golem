@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		{% block head %}
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{% block title %}{% endblock title%} | Golem</title>
+		<link rel="stylesheet" href="/static/css/defaults.css" />
+		<link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg" />
+		<link rel="icon" type="image/png" href="/static/images/favicon.png" />
+		{% endblock head %}
+	</head>
+	<body>
+		<div id="wrapper">
+			{%- block nav -%}{%- endblock nav -%}{%- block content %} {% endblock content -%}
+		</div>
+		{% block body %} {% endblock body %}
+	</body>
+</html>

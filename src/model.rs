@@ -4,12 +4,14 @@ use tokio::sync::Mutex;
 
 pub mod database;
 pub mod message;
+pub mod room;
 pub mod session;
 pub mod snowflake;
 pub mod user;
 
 pub use database::Database;
 pub use message::Message;
+pub use room::Room;
 pub use session::Session;
 pub use snowflake::Snowflake;
 pub use user::User;

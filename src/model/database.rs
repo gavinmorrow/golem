@@ -1,9 +1,10 @@
-use super::{Message, Session, Snowflake, User};
-use log::{debug, trace};
+use super::{Message, Room, Session, Snowflake, User};
+use log::{debug, info, trace};
 use rusqlite::{types::FromSql, Connection, OptionalExtension, Result as SqlResult, Row};
 
 type Result<T> = SqlResult<Option<T>>;
 
+#[derive(Debug)]
 pub struct Database {
     conn: Connection,
 }
@@ -11,18 +12,16 @@ pub struct Database {
 /// Build the database.
 impl Database {
     pub fn build() -> SqlResult<Database> {
-        let conn = Database::init_db()?;
+        let conn = Connection::open("./db.sqlite3")?;
         let db = Database { conn };
+        db.init_tables()?;
+        db.init_main_room()?;
         Ok(db)
     }
 
-    fn init_db() -> SqlResult<Connection> {
-        let conn = Connection::open("./db.sqlite3")?;
-
-        trace!("Opened database connection.");
-        trace!("Initializing database...");
-
-        conn.execute(
+    fn init_tables(&self) -> SqlResult<()> {
+        trace!("Initializing database tables...");
+        self.conn.execute(
             "CREATE TABLE IF NOT EXISTS users (
                 id   INT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -31,19 +30,18 @@ impl Database {
             (),
         )?;
 
-        conn.execute(
+        self.conn.execute(
             "CREATE TABLE IF NOT EXISTS messages (
                 id          INT PRIMARY KEY,
                 author      INT NOT NULL,
                 author_name TEXT NOT NULL,
-                parent      INT,
-                content     TEXT NOT NULL,
-                FOREIGN KEY(parent) REFERENCES messages(id)
+                parent      INT NOT NULL,
+                content     TEXT NOT NULL
             )",
             (),
         )?;
 
-        conn.execute(
+        self.conn.execute(
             "CREATE TABLE IF NOT EXISTS sessions (
                 id      INT PRIMARY KEY,
                 token   INT NOT NULL,
@@ -53,9 +51,26 @@ impl Database {
             (),
         )?;
 
-        trace!("Finished initialized database");
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS rooms (
+                id   INT PRIMARY KEY,
+                name TEXT NOT NULL
+            )",
+            (),
+        )?;
 
-        Ok(conn)
+        trace!("Finished initializing database tables.");
+
+        Ok(())
+    }
+
+    fn init_main_room(&self) -> SqlResult<()> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO rooms (id, name) VALUES (0, 'main')",
+            (),
+        )?;
+        info!("Created main room.");
+        Ok(())
     }
 }
 
@@ -152,33 +167,24 @@ impl Database {
         messages
     }
 
-    pub fn get_children_of(
-        &self,
-        message: Option<&Snowflake>,
-        depth: u8,
-    ) -> SqlResult<Vec<Message>> {
-        // Return an empty vector if the depth is 0
-        if depth == 0 {
-            return Ok(Vec::new());
-        }
-
+    pub fn get_children_of(&self, parent: Option<&Snowflake>) -> SqlResult<Vec<Message>> {
         // Start by getting only the direct children of the given message
         // Then, for each child, get the children of that child, and so on
-        // until we reach the given depth
+        // Until there are no more children
 
         let mut stmt = self
             .conn
             .prepare("SELECT * FROM messages WHERE parent=?1")?;
 
         let mut direct_children: Vec<Message> = stmt
-            .query_map((message.map(|id| id.id()),), |row| self.map_message(row))?
+            .query_map((parent.map(|id| id.id()),), |row| self.map_message(row))?
             // Safe b/c the values are all set to be `Ok` above
             .map(|msg| msg.unwrap())
             .collect();
 
         let mut children: Vec<Message> = direct_children
             .iter()
-            .map(|child| self.get_children_of(Some(&child.id), depth - 1))
+            .map(|child| self.get_children_of(Some(&child.id)))
             .flat_map(|result| match result {
                 Ok(vec) => vec.into_iter().map(|item| Ok(item)).collect(),
                 Err(er) => vec![Err(er)],
@@ -196,22 +202,14 @@ impl Database {
     pub fn add_message(&self, message: &Message) -> SqlResult<()> {
         debug!("Adding message {} to database", message.id.id());
 
-        // TODO: make a proper room system
-        // For now, an id of 0 means it is in the main room
-        // As rooms aren't implemented yet, we just set the parent to None
-        let parent = match message.parent.id() {
-            0 => None,
-            id => Some(id),
-        };
-
         self.conn.execute(
             "INSERT INTO messages (id, author, author_name, parent, content) VALUES (?1, ?2, ?3, ?4, ?5)",
             (
                 message.id.id(),
                 message.author.id(),
                 message.author_name.as_str(),
-                parent,
-                <String as AsRef<str>>::as_ref(&message.content),
+                message.parent.id(),
+                message.content.as_str(),
             ),
         )?;
 
@@ -223,22 +221,62 @@ impl Database {
     fn map_message(&self, row: &Row) -> SqlResult<Message> {
         trace!("Mapping db row to message");
 
-        // See `add_message` for why this is done
-        let parent = match self.get_snowflake_column_optional(row, 3) {
-            Some(id) => id,
-            None => Snowflake::try_from(0).expect("0 (hardcoded) is a valid snowflake"),
-        };
-
+        let id = self.get_snowflake_column(row, 0);
         let author = self.get_snowflake_column(row, 1);
         let author_name = self.get_column(row, 2);
+        let parent = self.get_snowflake_column(row, 3);
+        let content = self.get_column(row, 4);
 
         Ok(Message {
-            id: self.get_snowflake_column(row, 0),
+            id,
             author,
             author_name,
             parent,
-            content: self.get_column(row, 4),
+            content,
         })
+    }
+}
+
+/// Room stuff
+impl Database {
+    pub fn add_room(&self, room: &Room) -> SqlResult<()> {
+        debug!("Adding room {} to database", room.id.id());
+
+        self.conn.execute(
+            "INSERT INTO rooms (id, name) VALUES (?1, ?2)",
+            (room.id.id(), room.name.as_str()),
+        )?;
+
+        debug!("Added room {} to database", room.id);
+        info!("Created room {}: {}", room.id, room.name);
+
+        Ok(())
+    }
+
+    pub fn get_room(&self, id: crate::model::room::Id) -> Result<Room> {
+        debug!("Getting room {} from database", id);
+
+        self.conn
+            .query_row("SELECT * FROM rooms WHERE id=?1", (id.id(),), |row| {
+                Ok(Room {
+                    id: self.get_snowflake_column(row, 0),
+                    name: self.get_column(row, 1),
+                })
+            })
+            .optional()
+    }
+
+    pub fn get_room_by_name(&self, name: &String) -> Result<Room> {
+        debug!("Getting room {} from database by name", name);
+
+        self.conn
+            .query_row("SELECT * FROM rooms WHERE name=?1", (name,), |row| {
+                Ok(Room {
+                    id: self.get_snowflake_column(row, 0),
+                    name: self.get_column(row, 1),
+                })
+            })
+            .optional()
     }
 }
 

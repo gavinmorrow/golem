@@ -2,7 +2,8 @@ import handleMessage from "./ws/handleMessage.js";
 
 // Connect to the websocket endpoint
 const HOST = "localhost:7878";
-const ws = new WebSocket(`ws://${HOST}/api/ws/`);
+const roomId = document.querySelector("meta[name=data-room-id]").content;
+const ws = new WebSocket(`ws://${HOST}/api/ws/${roomId}`);
 
 ws.addEventListener("open", event => {
 	console.log("Connected to the websocket endpoint!");
