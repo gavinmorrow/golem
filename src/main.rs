@@ -16,7 +16,7 @@ type Snowcloud = snowcloud::MultiThread<43, 8, 12>;
 const EPOCH: u64 = 1650667342;
 const PRIMARY_ID: i64 = 1;
 
-const ROOT_PATH: &str = "127.0.0.1:7878";
+const ROOT_PATH: &str = "0.0.0.0:7878";
 
 #[tokio::main]
 async fn main() {
