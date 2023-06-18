@@ -33,6 +33,7 @@ pub fn router(appstate: AppState) -> Router {
         .route("/", axum::routing::get(index))
         .nest_service("/static", ServeDir::new("public"))
         .route("/room/:room_name", axum::routing::get(room))
+        .route("/register", axum::routing::get(register))
         .with_state(state)
 }
 
@@ -60,4 +61,12 @@ async fn room(
 
     let rendered = state.templates.render("room.html", &context).unwrap();
     Ok(Html(rendered))
+}
+
+async fn register(State(state): State<TemplateState>) -> Html<String> {
+    let rendered = state
+        .templates
+        .render("register.html", &Context::new())
+        .unwrap();
+    Html(rendered)
 }
